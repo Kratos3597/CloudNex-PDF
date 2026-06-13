@@ -1,21 +1,30 @@
-import com.android.build.api.dsl.ApplicationExtension
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("dev.flutter.flutter-gradle-plugin")
 }
 
-extensions.configure<ApplicationExtension>("android") {
-    namespace = "com.example.cloudnexpdf"   // ⚠️ change if needed
+android {
+    namespace = "com.example.cloudnexpdf"
+
     compileSdk = 34
+    ndkVersion = flutter.ndkVersion
 
     defaultConfig {
-        applicationId = "com.example.cloudnexpdf"  // ⚠️ change if needed
+        applicationId = "com.example.cloudnexpdf"
         minSdk = 21
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 
     buildTypes {
@@ -27,15 +36,8 @@ extensions.configure<ApplicationExtension>("android") {
             )
         }
     }
+}
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
-        }
-    }
+flutter {
+    source = "../.."
 }
