@@ -18,12 +18,13 @@ pluginManagement {
 }
 
 plugins {
-    // Flutter plugin loader (required)
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
 
-    // ✅ STABLE AND FLUTTER COMPATIBLE VERSIONS
-    id("com.android.application") version "8.2.2" apply false
-    id("com.android.library") version "8.2.2" apply false
+    // ✅ FIXED AGP VERSION (required by Flutter)
+    id("com.android.application") version "8.6.1" apply false
+    id("com.android.library") version "8.6.1" apply false
+
+    // ✅ SAFE Kotlin version
     id("org.jetbrains.kotlin.android") version "1.9.0" apply false
 }
 
