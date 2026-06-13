@@ -12,13 +12,13 @@ android {
 
     defaultConfig {
         applicationId = "com.example.pdf_pro_reader"
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
-    // ✅ FIX: Java/Kotlin JVM compatibility (CRITICAL)
+    // Java / Kotlin compatibility (IMPORTANT)
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -27,7 +27,16 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
+    // ✅ SAFE RELEASE BUILD (prevents shrink/minify crashes)
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
+    }
 }
+
 flutter {
     source = "../.."
 }
