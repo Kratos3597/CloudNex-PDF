@@ -1,21 +1,41 @@
-// Top-level build file
-plugins {
-    // Keep your environment's versions here (Do not change)
-    id("com.android.application") apply false
-    id("com.android.library") apply false
+import com.android.build.api.dsl.ApplicationExtension
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-    // IMPORTANT: remove version to avoid CI/plugin conflict
-    id("org.jetbrains.kotlin.android") apply false
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
 }
 
-subprojects {
-    afterEvaluate {
-        val extension = extensions.findByName("android")
-        if (extension is com.android.build.gradle.BaseExtension) {
-            extension.compileSdkVersion(36)
-            extension.defaultConfig {
-                targetSdkVersion(36)
-            }
+extensions.configure<ApplicationExtension>("android") {
+    namespace = "com.example.cloudnexpdf"   // ⚠️ change if needed
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "com.example.cloudnexpdf"  // ⚠️ change if needed
+        minSdk = 21
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
         }
     }
 }
