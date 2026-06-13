@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.pdf_pro_reader"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36 // Hardcode 36 here to override the flutter default
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
