@@ -1,10 +1,8 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
-import 'package:pdf/widgets.dart' as pw; // Importing the PDF creation library
+// Removed unused pdf/widgets.dart import
 
 class PdfService {
-  
-  /// Selects a PDF file from the Android device storage
   Future<File?> pickPdfFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -17,10 +15,8 @@ class PdfService {
     return null;
   }
 
-  /// Placeholder for editing logic
   Future<void> modifyPdf(File file) async {
-    // This is where we will eventually integrate the 
-    // pdf manipulation features for your editor
-    print("Editing: ${file.path}");
+    // Replaced print with a comment; in a real app, use a Logger package
+    // debugPrint("Editing: ${file.path}");
   }
 }
