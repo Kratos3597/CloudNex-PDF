@@ -1,6 +1,6 @@
 name: pdf_pro_reader
 description: "A privacy-first, open-source Android PDF reader and editor. No ads, no subscriptions, no tracking."
-publish_to: 'none' # This is not a library, it's an app.
+publish_to: 'none'
 
 version: 1.0.0+1
 
@@ -11,17 +11,19 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # PDF Engine (The core)
-  pdf: ^3.11.0          # Pure Dart PDF generation and modification
-  printing: ^5.13.0     # Previewing, printing, and sharing PDFs
+  # PDF Engine & Viewer
+  pdf: ^3.11.0          
+  printing: ^5.13.0     
+  pdfrx: ^2.2.0          # Added this for high-performance viewing
 
-  # File Management (Critical for Android Scoped Storage)
-  file_picker: ^8.1.4   # Selecting files from local Android storage
-  path_provider: ^2.1.3 # Managing temporary directories for edited files
-  permission_handler: ^11.3.1 # Requesting necessary storage permissions
+  # File Management 
+  file_picker: ^8.1.4   
+  path_provider: ^2.1.3 
+  permission_handler: ^11.3.1 
 
-  # Utilities
-  google_fonts: ^6.2.1  # Professional typography for a premium feel
+  # State Management & Utilities
+  provider: ^6.1.2       # Moved here from dev_dependencies
+  google_fonts: ^6.2.1  
 
 dev_dependencies:
   flutter_test:
