@@ -6,6 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.pdf_pro_reader"
+
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -16,8 +17,17 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
-}
 
+    // ✅ FIX: Java/Kotlin JVM compatibility (CRITICAL)
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
 flutter {
     source = "../.."
 }
