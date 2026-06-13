@@ -1,0 +1,15 @@
+{
+  "name": "Flutter Android Project",
+  "image": "ghcr.io/cirruslabs/flutter:latest",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Dart-Code.flutter",
+        "Dart-Code.dart-code"
+      ]
+    }
+  },
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/home/cirrus/sdks/flutter/bin"
+  }
+}
