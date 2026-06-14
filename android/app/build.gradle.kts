@@ -1,12 +1,12 @@
 plugins {
     id("com.android.application")
-    id("kotlin-android")
+    // AGP 9+ includes Kotlin support automatically.
+    // Removing the explicit plugin prevents the task conflict.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
     namespace = "com.example.pdf_pro_reader"
-
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -18,7 +18,6 @@ android {
         versionName = flutter.versionName
     }
 
-    // Java / Kotlin compatibility (IMPORTANT)
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -28,7 +27,6 @@ android {
         jvmTarget = "17"
     }
 
-    // ✅ SAFE RELEASE BUILD (prevents shrink/minify crashes)
     buildTypes {
         release {
             isMinifyEnabled = false
