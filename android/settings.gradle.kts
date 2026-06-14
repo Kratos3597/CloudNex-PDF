@@ -20,12 +20,12 @@ pluginManagement {
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
 
-    // ✅ FIXED AGP VERSION (required by Flutter)
-    id("com.android.application") version "8.6.1" apply false
-    id("com.android.library") version "8.6.1" apply false
+    // 🚀 AGP 9 UPGRADE
+    id("com.android.application") version "9.0.1" apply false
+    id("com.android.library") version "9.0.1" apply false
 
-    // ✅ SAFE Kotlin version
-    id("org.jetbrains.kotlin.android") version "1.9.0" apply false
+    // 🚀 REQUIRED FOR AGP 9
+    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
 }
 
 include(":app")

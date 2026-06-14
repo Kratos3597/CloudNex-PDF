@@ -18,6 +18,7 @@ android {
         versionName = flutter.versionName
     }
 
+    // Java / Kotlin compatibility (required for Flutter stable builds)
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -27,9 +28,13 @@ android {
         jvmTarget = "17"
     }
 
+    // 🔥 SAFE RELEASE CONFIG (prevents shrink/minify conflicts)
     buildTypes {
         release {
             isMinifyEnabled = false
+            isShrinkResources = false
+
+            // keep proguard file but NOT active shrinking
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
