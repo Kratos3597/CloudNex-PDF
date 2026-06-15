@@ -16,12 +16,22 @@ allprojects {
     }
 }
 
-// Correctly set build directory using DirectoryProperty
+// Correctly set build directory
 rootProject.layout.buildDirectory.set(file("../build"))
 
 subprojects {
     project.layout.buildDirectory.set(rootProject.layout.buildDirectory.dir(project.name))
-    project.evaluationDependsOn(":app")
+    
+    // Force consistency for all plugins
+    afterEvaluate {
+        val extension = extensions.findByName("android")
+        if (extension is com.android.build.gradle.BaseExtension) {
+            extension.compileSdkVersion(36)
+            extension.defaultConfig {
+                targetSdkVersion(36)
+            }
+        }
+    }
 }
 
 // Correctly register the clean task
