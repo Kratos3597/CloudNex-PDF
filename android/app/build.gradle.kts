@@ -5,7 +5,7 @@ plugins {
 
 android {
     // 1. Updated from com.example to your own brand namespace
-    namespace = "com.cloudnex.pdf_pro"
+    namespace = "com.cloudnex.pdfpro"
     
     // 2. Lowered to stable Android 14/15 standards
     compileSdk = 34 
@@ -13,10 +13,10 @@ android {
 
     defaultConfig {
         // 3. Updated your unique Application ID
-        applicationId = "com.cloudnex.pdf_pro"
+        applicationId = "com.cloudnex.pdfpro"
         
         // 4. Force a safe minimum SDK (PDF tools usually need API 23+)
-        minSdk = 23 
+        minSdk = 25
         targetSdk = 34
         
         versionCode = flutter.versionCode
