@@ -1,19 +1,24 @@
 plugins {
     id("com.android.application")
-    // AGP 9+ includes Kotlin support automatically.
-    // Removing the explicit plugin prevents the task conflict.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
-    namespace = "com.example.pdf_pro_reader"
-    compileSdk = 36
+    // 1. Updated from com.example to your own brand namespace
+    namespace = "com.cloudnex.pdf_pro_reader"
+    
+    // 2. Lowered to stable Android 14/15 standards
+    compileSdk = 34 
     ndkVersion = flutter.ndkVersion
 
     defaultConfig {
-        applicationId = "com.example.pdf_pro_reader"
-        minSdk = flutter.minSdkVersion
-        targetSdk = 36
+        // 3. Updated your unique Application ID
+        applicationId = "com.cloudnex.pdf_pro_reader"
+        
+        // 4. Force a safe minimum SDK (PDF tools usually need API 23+)
+        minSdk = 23 
+        targetSdk = 34
+        
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
