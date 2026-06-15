@@ -5,7 +5,7 @@ plugins {
 
 android {
     // 1. Updated from com.example to your own brand namespace
-    namespace = "com.cloudnex.pdf_pro_reader"
+    namespace = "com.cloudnex.pdf_pro"
     
     // 2. Lowered to stable Android 14/15 standards
     compileSdk = 34 
@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         // 3. Updated your unique Application ID
-        applicationId = "com.cloudnex.pdf_pro_reader"
+        applicationId = "com.cloudnex.pdf_pro"
         
         // 4. Force a safe minimum SDK (PDF tools usually need API 23+)
         minSdk = 23 
