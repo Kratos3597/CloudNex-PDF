@@ -1,4 +1,4 @@
-package com.example.pdf_pro_reader
+package com.cloudnex.pdf_pro_reader
 
 import io.flutter.embedding.android.FlutterActivity
 
