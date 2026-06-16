@@ -1,21 +1,20 @@
 name: cloudnex_pdf_reader
 description: "A professional PDF reader with RAG integration and editing tools."
 publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
-  sdk: '^3.5.0'
+  sdk: ">=3.5.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  # Syncfusion PDF Viewer for UI and interaction
+
   syncfusion_flutter_pdfviewer: 33.2.13
-  # Syncfusion PDF library for document editing, saving, and annotations
   syncfusion_flutter_pdf: 33.2.13
-  # File picking functionality
-  file_picker: ^8.1.0
   syncfusion_flutter_core: 33.2.13
+  file_picker: ^8.1.0
 
 dev_dependencies:
   flutter_test:
