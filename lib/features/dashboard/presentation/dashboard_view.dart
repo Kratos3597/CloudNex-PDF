@@ -1,10 +1,13 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/cyberpunk_theme.dart';
 import '../../pdf_editor/controller/pdf_state_controller.dart';
 import '../../pdf_editor/presentation/pdf_workspace_view.dart';
 import '../../pdf_editor/services/pdf_modifier_service.dart';
+import '../../pdf_editor/services/pdf_cache_service.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -15,6 +18,20 @@ class DashboardView extends StatefulWidget {
 
 class _DashboardViewState extends State<DashboardView> {
   final PdfStateController _editorStateController = PdfStateController();
+  List<Map<String, String>> _history = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final history = await PdfCacheService.getHistory();
+    setState(() {
+      _history = history;
+    });
+  }
 
   Future<void> handleFileIngestion() async {
     final result = await FilePicker.platform.pickFiles(
@@ -23,10 +40,42 @@ class _DashboardViewState extends State<DashboardView> {
       withData: true,
     );
 
-    if (result == null || result.files.single.bytes == null) return;
+    if (result == null) return;
+    
+    final file = result.files.single;
+    if (file.bytes == null) return;
 
-    final Uint8List rawBytes = result.files.single.bytes!;
+    final Uint8List rawBytes = file.bytes!;
+    
+    if (file.path != null) {
+      await PdfCacheService.addToHistory(file.path!, file.name);
+      _loadHistory();
+    }
 
+    _processFile(rawBytes);
+  }
+
+  Future<void> _openFromHistory(String path, String name) async {
+    try {
+      final file = File(path);
+      if (await file.exists()) {
+        final bytes = await file.readAsBytes();
+        _processFile(bytes);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('// ERROR: SOURCE FILE MOVED OR DELETED'),
+          backgroundColor: CyberpunkTheme.neonPink,
+        ));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('// ERROR: $e'),
+        backgroundColor: CyberpunkTheme.neonPink,
+      ));
+    }
+  }
+
+  void _processFile(Uint8List rawBytes) {
     if (PdfModifierService.isDocumentEncrypted(rawBytes)) {
       if (!mounted) return;
       _launchSecurityDecryptionModal(rawBytes);
@@ -160,7 +209,7 @@ class _DashboardViewState extends State<DashboardView> {
         builder: (_) =>
             PdfWorkspaceView(stateController: _editorStateController),
       ),
-    );
+    ).then((_) => _loadHistory());
   }
 
   @override
@@ -236,6 +285,72 @@ class _DashboardViewState extends State<DashboardView> {
                     ),
                   ),
                 ),
+              ),
+              const SizedBox(height: 32),
+              
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '// RECENT_BUFFERS',
+                    style: TextStyle(
+                      color: CyberpunkTheme.neonCyan,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2.0,
+                    ),
+                  ),
+                  if (_history.isNotEmpty)
+                    TextButton(
+                      onPressed: () async {
+                        final SharedPreferences prefs = await SharedPreferences.getInstance();
+                        await prefs.remove('cloudnex_pdf_history');
+                        _loadHistory();
+                      },
+                      child: const Text('PURGE_ALL', style: TextStyle(color: CyberpunkTheme.neonPink, fontSize: 10)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              
+              Expanded(
+                child: _history.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'NO RECENT DATA STREAMS FOUND',
+                          style: TextStyle(color: CyberpunkTheme.textSecondary, fontSize: 10),
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: _history.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final item = _history[index];
+                          return ListTile(
+                            onTap: () => _openFromHistory(item['path']!, item['name']!),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(color: CyberpunkTheme.neonCyan.withValues(alpha: 0.2)),
+                            ),
+                            tileColor: CyberpunkTheme.surfaceTranslucent,
+                            leading: const Icon(Icons.picture_as_pdf, color: CyberpunkTheme.neonCyan),
+                            title: Text(
+                              item['name']!,
+                              style: const TextStyle(color: CyberpunkTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              item['path']!,
+                              style: const TextStyle(color: CyberpunkTheme.textSecondary, fontSize: 10),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: const Icon(Icons.chevron_right, color: CyberpunkTheme.textSecondary, size: 16),
+                          );
+                        },
+                      ),
               ),
             ],
           ),

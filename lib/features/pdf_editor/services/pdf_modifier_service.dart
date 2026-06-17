@@ -108,19 +108,29 @@ class PdfModifierService {
       double y,
       String? password,
       ) {
-    final PdfDocument doc =
-    PdfDocument(inputBytes: bytes, password: password);
-
+    PdfDocument? doc;
     try {
-      doc.pages[page].graphics.drawImage(
+      doc = PdfDocument(inputBytes: bytes, password: password);
+      
+      if (page >= doc.pages.count) {
+        throw Exception('Page index out of range');
+      }
+
+      final PdfPage pdfPage = doc.pages[page];
+      
+      // Syncfusion PDF coordinate system starts from top-left.
+      // Offset by half of the signature size to center it on the tap
+      pdfPage.graphics.drawImage(
         PdfBitmap(sig),
-        fm.Rect.fromLTWH(x, y, 130, 65),
+        fm.Rect.fromLTWH(x - 65, y - 32.5, 130, 65),
       );
 
       final List<int> saved = doc.saveSync();
       return Uint8List.fromList(saved);
+    } catch (e) {
+      rethrow;
     } finally {
-      doc.dispose();
+      doc?.dispose();
     }
   }
 

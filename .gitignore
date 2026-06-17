@@ -26,7 +26,8 @@ doc/api/
 *.js.map
 # Keystore and secrets
 *.jks
-*.properties
+local.properties
+# gradle.properties is essential and should be tracked
 
 .flutter-plugins
 .flutter-plugins-dependencies

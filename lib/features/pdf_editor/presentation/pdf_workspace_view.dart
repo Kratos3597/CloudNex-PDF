@@ -94,8 +94,10 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
               Positioned.fill(
                 child: SfPdfViewer.memory(
                   byteStream,
-                  key: _pdfViewerKey,
+                  // Force rebuild when bytes change by using a unique key
+                  key: ValueKey(byteStream.hashCode),
                   controller: widget.stateController.pdfViewerController,
+                  initialPageNumber: widget.stateController.activePageNumber,
                   interactionMode: PdfInteractionMode.pan,
                   onTap: _handleCanvasTapIntercept,
                   onPageChanged: (details) => widget.stateController.updatePageNumber(details.newPageNumber),

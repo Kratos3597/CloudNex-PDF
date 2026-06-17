@@ -10,6 +10,41 @@ class PdfCacheService {
   static const String _kSessionPageKey = 'cloudnex_session_page';
   static const String _kSessionPasswordKey = 'cloudnex_session_password';
   static const String _kRecoveryFileName = 'matrix_recovery.tmp';
+  static const String _kHistoryKey = 'cloudnex_pdf_history';
+
+  /// Adds a file path and name to the history list
+  static Future<void> addToHistory(String path, String name) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> history = prefs.getStringList(_kHistoryKey) ?? [];
+    
+    // Remove if already exists to move to top
+    history.removeWhere((item) => item.startsWith('$path|'));
+    
+    // Add to top
+    history.insert(0, '$path|$name|${DateTime.now().millisecondsSinceEpoch}');
+    
+    // Keep last 10
+    if (history.length > 10) {
+      history = history.sublist(0, 10);
+    }
+    
+    await prefs.setStringList(_kHistoryKey, history);
+  }
+
+  /// Retrieves the list of recent files
+  static Future<List<Map<String, String>>> getHistory() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final List<String> history = prefs.getStringList(_kHistoryKey) ?? [];
+    
+    return history.map((item) {
+      final parts = item.split('|');
+      return {
+        'path': parts[0],
+        'name': parts[1],
+        'timestamp': parts.length > 2 ? parts[2] : '',
+      };
+    }).toList();
+  }
 
   /// Returns the system-sanctioned isolated temporary file directory target
   static Future<File> _getRecoveryFileTarget() async {
