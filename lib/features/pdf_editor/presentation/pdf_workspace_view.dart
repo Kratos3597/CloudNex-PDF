@@ -86,7 +86,8 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
           final byteStream = widget.stateController.currentBytes;
           if (byteStream == null) return const Center(child: Text('// NO DATA'));
 
-          final structuralReport = PdfModifierService.analyzeDocumentStructure(byteStream, widget.stateController.activeDocumentPassword);
+          final structuralReport = widget.stateController.securityReport;
+          if (structuralReport == null) return const Center(child: CircularProgressIndicator());
 
           return Stack(
             children: [
@@ -104,12 +105,30 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
               _buildTopBar(structuralReport),
               if (_showSecurityPanel) _buildSecurityPanel(structuralReport),
               if (_showToolMenu) _buildToolMenu(),
+              _buildMenuToggle(),
             ],
           );
         },
       ),
     );
   }
+
+  Widget _buildMenuToggle() => Positioned(
+        right: 16,
+        bottom: 30,
+        child: FloatingActionButton(
+          backgroundColor: CyberpunkTheme.backgroundDark,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: CyberpunkTheme.neonCyan),
+          ),
+          onPressed: () => setState(() => _showToolMenu = !_showToolMenu),
+          child: Icon(
+            _showToolMenu ? Icons.close : Icons.apps,
+            color: CyberpunkTheme.neonCyan,
+          ),
+        ),
+      );
 
   Widget _buildTopBar(PdfSecurityReport report) => Positioned(
         top: 50, left: 16, right: 16,
@@ -140,10 +159,63 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
       );
 
   Widget _buildToolMenu() => Positioned(
-        right: 16, bottom: 110,
-        child: Column(children: [
-          IconButton(icon: const Icon(Icons.save), onPressed: _executeSystemSave),
-          IconButton(icon: const Icon(Icons.share), onPressed: _executeSystemShare),
-        ]),
+        right: 16,
+        bottom: 110,
+        child: Column(
+          children: [
+            _buildToolButton(
+              icon: Icons.gesture,
+              onPressed: _openSignaturePad,
+              isActive: widget.stateController.currentTool ==
+                  ActivePdfTool.signaturePlacement,
+            ),
+            const SizedBox(height: 12),
+            _buildToolButton(
+              icon: Icons.save,
+              onPressed: _executeSystemSave,
+            ),
+            const SizedBox(height: 12),
+            _buildToolButton(
+              icon: Icons.share,
+              onPressed: _executeSystemShare,
+            ),
+          ],
+        ),
       );
+
+  Widget _buildToolButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    bool isActive = false,
+  }) {
+    return Container(
+      decoration: CyberpunkTheme.glassDecoration(
+        borderRadius: BorderRadius.circular(12),
+        borderColor: isActive
+            ? CyberpunkTheme.neonCyan
+            : CyberpunkTheme.neonCyan.withValues(alpha: 0.3),
+      ),
+      child: IconButton(
+        icon: Icon(icon,
+            color: isActive ? CyberpunkTheme.neonCyan : Colors.white),
+        onPressed: onPressed,
+      ),
+    );
+  }
+
+  Future<void> _openSignaturePad() async {
+    final Uint8List? signature = await showDialog<Uint8List>(
+      context: context,
+      builder: (context) => const SignaturePadView(),
+    );
+
+    if (signature != null) {
+      widget.stateController.setupSignaturePlacement(signature);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        backgroundColor: CyberpunkTheme.backgroundDark,
+        content: Text('// SIGNATURE CAPTURED: TAP ON PDF TO POSITION',
+            style: TextStyle(color: CyberpunkTheme.neonCyan)),
+      ));
+    }
+  }
 }

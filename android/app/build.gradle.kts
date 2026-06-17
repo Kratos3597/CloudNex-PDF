@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    id("org.jetbrains.kotlin.android")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -7,8 +8,8 @@ android {
     // 1. Updated from com.example to your own brand namespace
     namespace = "com.cloudnex.pdfpro"
     
-    // 2. Lowered to stable Android 14/15 standards
-    compileSdk = 34 
+    // 2. Updated to latest requirements for AndroidX dependencies
+    compileSdk = 36 
     ndkVersion = flutter.ndkVersion
 
     defaultConfig {
@@ -17,7 +18,7 @@ android {
         
         // 4. Force a safe minimum SDK (PDF tools usually need API 23+)
         minSdk = 25
-        targetSdk = 34
+        targetSdk = 36
         
         versionCode = flutter.versionCode
         versionName = flutter.versionName

@@ -75,24 +75,20 @@ class _SignaturePadViewState extends State<SignaturePadView> {
 
                 // Active drawing zone
                 Expanded(
-                  child: GestureDetector(
-                    onPanUpdate: (details) {
-                      setState(() {
-                        final RenderBox renderBox =
-                            context.findRenderObject() as RenderBox;
-                        _points.add(
-                            renderBox.globalToLocal(details.globalPosition));
-                      });
-                    },
-                    onPanEnd: (_) => _points.add(null),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors
-                            .white, // High contrast canvas backing for clear precision drawing
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: GestureDetector(
+                        onPanUpdate: (details) {
+                          setState(() {
+                            _points.add(details.localPosition);
+                          });
+                        },
+                        onPanEnd: (_) => setState(() => _points.add(null)),
                         child: CustomPaint(
                           size: Size.infinite,
                           painter: VectorLinePainter(_points),

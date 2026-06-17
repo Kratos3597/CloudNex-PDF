@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../services/pdf_cache_service.dart';
 
+import '../services/pdf_modifier_service.dart';
+
 enum ActivePdfTool { none, draw, highlight, signaturePlacement }
 
 class PdfStateController extends ChangeNotifier {
@@ -16,6 +18,8 @@ class PdfStateController extends ChangeNotifier {
   ActivePdfTool _currentTool = ActivePdfTool.none;
   Uint8List? _activeSignatureGraphicBytes;
   String? _activeDocumentPassword;
+  
+  PdfSecurityReport? _securityReport;
 
   Uint8List? get currentBytes => _currentBytes;
   bool get canUndo => _undoStack.isNotEmpty;
@@ -25,6 +29,7 @@ class PdfStateController extends ChangeNotifier {
   bool get isViewportLocked => _currentTool != ActivePdfTool.none;
   Uint8List? get activeSignatureGraphicBytes => _activeSignatureGraphicBytes;
   String? get activeDocumentPassword => _activeDocumentPassword;
+  PdfSecurityReport? get securityReport => _securityReport;
 
   void loadDocument(Uint8List initialBytes,
       {String? password, int initialPage = 1}) {
@@ -35,10 +40,21 @@ class PdfStateController extends ChangeNotifier {
     _redoStack.clear();
     _currentTool = ActivePdfTool.none;
     _activeSignatureGraphicBytes = null;
+    
+    _updateSecurityReport();
 
     // Synergize instantly onto disk caching files
     _triggerBackgroundCacheSync();
     notifyListeners();
+  }
+
+  void _updateSecurityReport() {
+    if (_currentBytes != null) {
+      _securityReport = PdfModifierService.analyzeDocumentStructure(
+        _currentBytes!,
+        _activeDocumentPassword,
+      );
+    }
   }
 
   void setupSignaturePlacement(Uint8List graphicBytes) {
@@ -75,6 +91,7 @@ class PdfStateController extends ChangeNotifier {
     }
     _currentBytes = mutatedBytes;
     _redoStack.clear();
+    _updateSecurityReport();
     _triggerBackgroundCacheSync();
     notifyListeners();
   }

@@ -1,11 +1,9 @@
+import com.android.build.gradle.BaseExtension
+
 buildscript {
     repositories {
         google()
         mavenCentral()
-    }
-    dependencies {
-        classpath("com.android.tools.build:gradle:8.7.2")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")
     }
 }
 
@@ -25,7 +23,7 @@ subprojects {
     // Force consistency for all plugins
     afterEvaluate {
         val extension = extensions.findByName("android")
-        if (extension is com.android.build.gradle.BaseExtension) {
+        if (extension is BaseExtension) {
             extension.compileSdkVersion(36)
             extension.defaultConfig {
                 targetSdkVersion(36)

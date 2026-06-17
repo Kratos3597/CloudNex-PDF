@@ -11,18 +11,18 @@ dependencies:
   flutter:
     sdk: flutter
 
-  syncfusion_flutter_pdfviewer: ^24.2.3
-  syncfusion_flutter_pdf: ^24.2.3
-  syncfusion_flutter_core: 24.2.3
-  file_picker: ^8.0.0
-  share_plus: ^10.0.0
+  syncfusion_flutter_pdfviewer: ^33.2.13
+  syncfusion_flutter_pdf: ^33.2.13
+  syncfusion_flutter_core: ^33.2.13
+  file_picker: ^8.1.7
+  share_plus: ^10.1.4
   shared_preferences: ^2.2.0  # Add this if not present
   path_provider: ^2.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
