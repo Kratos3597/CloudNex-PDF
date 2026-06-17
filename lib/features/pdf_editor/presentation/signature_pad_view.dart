@@ -33,8 +33,9 @@ class _SignaturePadViewState extends State<SignaturePadView> {
 
     final picture = recorder.endRecording();
     final ui.Image img = await picture.toImage(400, 200);
-    final ByteData? pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
-    
+    final ByteData? pngBytes =
+        await img.toByteData(format: ui.ImageByteFormat.png);
+
     return pngBytes?.buffer.asUint8List();
   }
 
@@ -49,7 +50,6 @@ class _SignaturePadViewState extends State<SignaturePadView> {
           filter: CyberpunkTheme.glassBlurFilter,
           child: Container(
             width: double.infinity,
-            maxHeight: 340,
             decoration: CyberpunkTheme.glassDecoration(
               borderColor: CyberpunkTheme.neonCyan.withValues(alpha: 0.4),
             ),
@@ -58,29 +58,37 @@ class _SignaturePadViewState extends State<SignaturePadView> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.gesture, color: CyberpunkTheme.neonCyan, size: 18),
+                    Icon(Icons.gesture,
+                        color: CyberpunkTheme.neonCyan, size: 18),
                     SizedBox(width: 8),
                     Text(
                       'BIOMETRIC DRAW CORE',
-                      style: TextStyle(color: CyberpunkTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.5),
+                      style: TextStyle(
+                          color: CyberpunkTheme.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          letterSpacing: 1.5),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Active drawing zone
                 Expanded(
                   child: GestureDetector(
                     onPanUpdate: (details) {
                       setState(() {
-                        final RenderBox renderBox = context.findRenderObject() as RenderBox;
-                        _points.add(renderBox.globalToLocal(details.globalPosition));
+                        final RenderBox renderBox =
+                            context.findRenderObject() as RenderBox;
+                        _points.add(
+                            renderBox.globalToLocal(details.globalPosition));
                       });
                     },
                     onPanEnd: (_) => _points.add(null),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white, // High contrast canvas backing for clear precision drawing
+                        color: Colors
+                            .white, // High contrast canvas backing for clear precision drawing
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: ClipRRect(
@@ -94,32 +102,41 @@ class _SignaturePadViewState extends State<SignaturePadView> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Operation Row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     TextButton(
                       onPressed: () => setState(() => _points.clear()),
-                      child: const Text('PURGE', style: TextStyle(color: CyberpunkTheme.neonPink)),
+                      child: const Text('PURGE',
+                          style: TextStyle(color: CyberpunkTheme.neonPink)),
                     ),
                     Row(
                       children: [
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('CANCEL', style: TextStyle(color: CyberpunkTheme.textSecondary)),
+                          child: const Text('CANCEL',
+                              style: TextStyle(
+                                  color: CyberpunkTheme.textSecondary)),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: CyberpunkTheme.neonCyan.withValues(alpha: 0.2),
-                            side: const BorderSide(color: CyberpunkTheme.neonCyan),
+                            backgroundColor:
+                                CyberpunkTheme.neonCyan.withValues(alpha: 0.2),
+                            side: const BorderSide(
+                                color: CyberpunkTheme.neonCyan),
                           ),
                           onPressed: () async {
                             final bytes = await _exportCanvasToPngBytes();
-                            if (context.mounted) Navigator.of(context).pop(bytes);
+                            if (context.mounted)
+                              Navigator.of(context).pop(bytes);
                           },
-                          child: const Text('INJECT', style: TextStyle(color: CyberpunkTheme.textPrimary, fontWeight: FontWeight.bold)),
+                          child: const Text('INJECT',
+                              style: TextStyle(
+                                  color: CyberpunkTheme.textPrimary,
+                                  fontWeight: FontWeight.bold)),
                         ),
                       ],
                     )
