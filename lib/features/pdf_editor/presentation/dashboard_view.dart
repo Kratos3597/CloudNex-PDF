@@ -1,9 +1,12 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../../core/theme/cyberpunk_theme.dart';
-import '../controller/pdf_state_controller.dart';
-import '../services/pdf_modifier_service.dart';
-import 'pdf_workspace_view.dart';
+
+// Update these imports to match your project's structure
+import 'package:cloudnex_pdf_reader/core/theme/cyberpunk_theme.dart';
+import 'package:cloudnex_pdf_reader/features/pdf_editor/controller/pdf_state_controller.dart';
+import 'package:cloudnex_pdf_reader/features/pdf_editor/services/pdf_modifier_service.dart';
+import 'package:cloudnex_pdf_reader/features/pdf_editor/presentation/pdf_workspace_view.dart';
 
 class DashboardView extends StatefulWidget {
   final PdfStateController stateController;
@@ -20,14 +23,13 @@ class _DashboardViewState extends State<DashboardView> {
     final FilePickerResult? targetFile = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf'],
-      withData: true, // Memory lifecycle optimization (Point 2)
+      withData: true,
     );
 
     if (targetFile == null || targetFile.files.single.bytes == null) return;
 
     final rawFileBytes = targetFile.files.single.bytes!;
 
-    // POINT 9: Intercept if cryptographic security locks are present
     if (PdfModifierService.isDocumentEncrypted(rawFileBytes)) {
       if (!mounted) return;
       _launchSecurityDecryptionModal(rawFileBytes);
@@ -53,7 +55,7 @@ class _DashboardViewState extends State<DashboardView> {
               filter: CyberpunkTheme.glassBlurFilter,
               child: Container(
                 decoration: CyberpunkTheme.glassDecoration(
-                  borderColor: CyberpunkTheme.neonPink.withValues(alpha: 0.5),
+                  borderColor: CyberpunkTheme.neonPink.withOpacity(0.5),
                 ),
                 padding: const EdgeInsets.all(24),
                 child: Column(
@@ -83,14 +85,15 @@ class _DashboardViewState extends State<DashboardView> {
                           color: Colors.white, fontFamily: 'monospace'),
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: Colors.black25,
+                        // FIXED: Replaced black25 with black.withOpacity(0.25)
+                        fillColor: Colors.black.withOpacity(0.25),
                         hintText: 'ENTER DECRYPTION KEY...',
                         hintStyle: const TextStyle(
                             color: Colors.white24, fontSize: 12),
                         enabledBorder: OutlineInputBorder(
                             borderSide: BorderSide(
                                 color: CyberpunkTheme.neonPink
-                                    .withValues(alpha: 0.3))),
+                                    .withOpacity(0.3))),
                         focusedBorder: const OutlineInputBorder(
                             borderSide:
                                 BorderSide(color: CyberpunkTheme.neonPink)),
@@ -118,7 +121,7 @@ class _DashboardViewState extends State<DashboardView> {
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor:
-                                CyberpunkTheme.neonPink.withValues(alpha: 0.2),
+                                CyberpunkTheme.neonPink.withOpacity(0.2),
                             side: const BorderSide(
                                 color: CyberpunkTheme.neonPink),
                           ),
@@ -129,8 +132,7 @@ class _DashboardViewState extends State<DashboardView> {
                                     rawBytes, inputKey);
 
                             if (isValid) {
-                              Navigator.pop(
-                                  context); // Close the entry gate modal
+                              Navigator.pop(context);
                               _bootWorkspace(rawBytes, inputKey);
                             } else {
                               setModalState(() {

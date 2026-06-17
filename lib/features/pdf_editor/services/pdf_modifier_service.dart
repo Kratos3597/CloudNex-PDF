@@ -1,4 +1,5 @@
-import 'dart:foundation';
+import 'package:flutter/foundation.dart';
+import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:flutter/material.dart' as fm;
 import 'package:file_picker/file_picker.dart';
