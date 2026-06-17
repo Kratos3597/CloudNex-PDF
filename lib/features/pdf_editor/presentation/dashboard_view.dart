@@ -55,7 +55,7 @@ class _DashboardViewState extends State<DashboardView> {
               filter: CyberpunkTheme.glassBlurFilter,
               child: Container(
                 decoration: CyberpunkTheme.glassDecoration(
-                  borderColor: CyberpunkTheme.neonPink.withOpacity(0.5),
+                  borderColor: CyberpunkTheme.neonPink.withValues(alpha: 0.5),
                 ),
                 padding: const EdgeInsets.all(24),
                 child: Column(
