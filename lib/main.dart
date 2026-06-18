@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/cyberpunk_theme.dart';
-import 'features/dashboard/presentation/dashboard_view.dart';
+import 'features/workspace/presentation/workspace_shell.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,7 +14,11 @@ void main() {
     systemNavigationBarIconBrightness: Brightness.light,
   ));
 
-  runApp(const CloudNexApp());
+  runApp(
+    const ProviderScope(
+      child: CloudNexApp(),
+    ),
+  );
 }
 
 class CloudNexApp extends StatelessWidget {
@@ -25,7 +30,7 @@ class CloudNexApp extends StatelessWidget {
       title: 'CloudNex PDF Editor',
       debugShowCheckedModeBanner: false,
       theme: CyberpunkTheme.darkTheme,
-      home: const DashboardView(),
+      home: const WorkspaceShell(),
     );
   }
 }
