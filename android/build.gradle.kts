@@ -33,9 +33,9 @@ subprojects {
                 }
             }
 
-            extension.compileSdkVersion(35)
+            extension.compileSdkVersion(36)
             extension.defaultConfig {
-                targetSdkVersion(35)
+                targetSdkVersion(36)
             }
         }
     }

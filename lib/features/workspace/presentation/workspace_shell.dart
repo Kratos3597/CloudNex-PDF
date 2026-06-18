@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../dashboard/presentation/dashboard_view.dart';
-import '../../pdf_editor/presentation/pdf_viewer_page.dart'; // Placeholder
+import '../../pdf_engine/presentation/pdf_viewer_screen.dart';
 import '../../../core/theme/cyberpunk_theme.dart';
 
 class WorkspaceShell extends ConsumerStatefulWidget {

@@ -30,7 +30,7 @@ dependencies:
 
   # UI & UX
   flutter_animate: ^4.5.0
-  font_awesome_flutter: ^10.7.0
+  font_awesome_flutter: ^10.8.0
   google_fonts: ^6.2.1
 
   # Utilities

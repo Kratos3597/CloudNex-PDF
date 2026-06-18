@@ -9,7 +9,7 @@ android {
     namespace = "com.cloudnex.pdfpro"
     
     // 2. Updated to latest requirements for AndroidX dependencies
-    compileSdk = 35 
+    compileSdk = 36 
     ndkVersion = flutter.ndkVersion
 
     defaultConfig {
@@ -18,7 +18,7 @@ android {
         
         // 4. Force a safe minimum SDK (PDF tools usually need API 23+)
         minSdk = 25
-        targetSdk = 35
+        targetSdk = 36
         
         versionCode = flutter.versionCode
         versionName = flutter.versionName
