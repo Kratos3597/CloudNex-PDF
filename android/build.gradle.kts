@@ -24,9 +24,18 @@ subprojects {
     afterEvaluate {
         val extension = extensions.findByName("android")
         if (extension is BaseExtension) {
-            extension.compileSdkVersion(36)
+            // Fix for "Namespace not specified" error in older plugins like isar_flutter_libs
+            if (extension.namespace == null) {
+                extension.namespace = when (project.name) {
+                    "isar_flutter_libs" -> "dev.isar.isar_flutter_libs"
+                    "path_provider_android" -> "io.flutter.plugins.pathprovider"
+                    else -> "com.example.${project.name.replace("-", "_")}"
+                }
+            }
+
+            extension.compileSdkVersion(35)
             extension.defaultConfig {
-                targetSdkVersion(36)
+                targetSdkVersion(35)
             }
         }
     }
