@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../dashboard/presentation/dashboard_view.dart';
-import '../../pdf_engine/presentation/pdf_viewer_screen.dart';
+import '../../library/presentation/library_view.dart';
+import '../../ai_assistant/presentation/ai_shell_view.dart';
+import '../../analytics/presentation/analytics_view.dart';
 import '../../../core/theme/cyberpunk_theme.dart';
 
 class WorkspaceShell extends ConsumerStatefulWidget {
@@ -18,9 +20,9 @@ class _WorkspaceShellState extends ConsumerState<WorkspaceShell> {
 
   final List<Widget> _pages = [
     const DashboardView(),
-    const Center(child: Text("Files Module", style: TextStyle(color: Colors.white))),
-    const Center(child: Text("AI Assistant Module", style: TextStyle(color: Colors.white))),
-    const Center(child: Text("Data Module", style: TextStyle(color: Colors.white))),
+    const LibraryView(),
+    const AiShellView(),
+    const AnalyticsView(),
   ];
 
   @override

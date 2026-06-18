@@ -6,6 +6,7 @@ import '../../../core/theme/cyberpunk_theme.dart';
 import '../controller/pdf_state_controller.dart';
 import '../services/pdf_modifier_service.dart';
 import 'signature_pad_view.dart';
+import '../../ai_assistant/presentation/ai_panel.dart';
 
 class PdfWorkspaceView extends StatefulWidget {
   final PdfStateController stateController;
@@ -21,6 +22,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
   List<Offset> _currentStrokePoints = [];
   bool _showToolMenu = false;
   bool _showSecurityPanel = false;
+  bool _showAiPanel = false;
 
   // --- ACTIONS ---
 
@@ -47,13 +49,17 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
   }
 
   Future<void> _applyGraphicSignature({required int pageIndex, required double x, required double y}) async {
-    final currentRawBytes = widget.stateController.currentBytes!;
+    final currentRawBytes = widget.stateController.currentBytes;
+    final graphicBytes = widget.stateController.activeSignatureGraphicBytes;
+    
+    if (currentRawBytes == null || graphicBytes == null) return;
+
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     
     final updatedBytes = await PdfModifierService.injectGraphicSignatureAsync(
       originalBytes: currentRawBytes,
       targetPageZeroIndexed: pageIndex,
-      signatureImageBytes: widget.stateController.activeSignatureGraphicBytes!,
+      signatureImageBytes: graphicBytes,
       coordinateX: x,
       coordinateY: y,
       password: widget.stateController.activeDocumentPassword,
@@ -65,10 +71,12 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
   }
 
   void _handleCanvasTapIntercept(PdfGestureDetails details) {
-    if (widget.stateController.currentTool != ActivePdfTool.signaturePlacement) return;
+    if (widget.stateController.currentTool != ActivePdfTool.signaturePlacement &&
+        widget.stateController.currentTool != ActivePdfTool.imagePlacement) return;
+    
     final Offset pdfPageCoordinates = details.pagePosition;
     _applyGraphicSignature(
-      pageIndex: widget.stateController.activePageNumber - 1,
+      pageIndex: details.pageNumber - 1,
       x: pdfPageCoordinates.dx,
       y: pdfPageCoordinates.dy,
     );
@@ -92,15 +100,22 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
           return Stack(
             children: [
               Positioned.fill(
-                child: SfPdfViewer.memory(
-                  byteStream,
-                  // Force rebuild when bytes change by using a unique key
-                  key: ValueKey(byteStream.hashCode),
-                  controller: widget.stateController.pdfViewerController,
-                  initialPageNumber: widget.stateController.activePageNumber,
-                  interactionMode: PdfInteractionMode.pan,
-                  onTap: _handleCanvasTapIntercept,
-                  onPageChanged: (details) => widget.stateController.updatePageNumber(details.newPageNumber),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SfPdfViewer.memory(
+                        byteStream,
+                        // Force rebuild when bytes change by using a unique key
+                        key: ValueKey(byteStream.hashCode),
+                        controller: widget.stateController.pdfViewerController,
+                        initialPageNumber: widget.stateController.activePageNumber,
+                        interactionMode: PdfInteractionMode.pan,
+                        onTap: _handleCanvasTapIntercept,
+                        onPageChanged: (details) => widget.stateController.updatePageNumber(details.newPageNumber),
+                      ),
+                    ),
+                    if (_showAiPanel) AiAssistantPanel(pdfBytes: byteStream),
+                  ],
                 ),
               ),
               // HUD Layer
@@ -173,6 +188,13 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
             ),
             const SizedBox(height: 12),
             _buildToolButton(
+              icon: Icons.image_outlined,
+              onPressed: _pickImageForPlacement,
+              isActive: widget.stateController.currentTool ==
+                  ActivePdfTool.imagePlacement,
+            ),
+            const SizedBox(height: 12),
+            _buildToolButton(
               icon: Icons.save,
               onPressed: _executeSystemSave,
             ),
@@ -180,6 +202,12 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
             _buildToolButton(
               icon: Icons.share,
               onPressed: _executeSystemShare,
+            ),
+            const SizedBox(height: 12),
+            _buildToolButton(
+              icon: Icons.auto_awesome,
+              onPressed: () => setState(() => _showAiPanel = !_showAiPanel),
+              isActive: _showAiPanel,
             ),
           ],
         ),
@@ -216,6 +244,19 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         backgroundColor: CyberpunkTheme.backgroundDark,
         content: Text('// SIGNATURE CAPTURED: TAP ON PDF TO POSITION',
+            style: TextStyle(color: CyberpunkTheme.neonCyan)),
+      ));
+    }
+  }
+
+  Future<void> _pickImageForPlacement() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    if (result != null && result.files.single.bytes != null) {
+      widget.stateController.setupImagePlacement(result.files.single.bytes!);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        backgroundColor: CyberpunkTheme.backgroundDark,
+        content: Text('// IMAGE BUFFER LOADED: TAP ON PDF TO POSITION',
             style: TextStyle(color: CyberpunkTheme.neonCyan)),
       ));
     }

@@ -1,9 +1,18 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:path_provider/path_provider.dart';
 
 class PdfService {
+  /// Extracts all text from a PDF for RAG/AI context
+  static String extractText(Uint8List bytes) {
+    final PdfDocument document = PdfDocument(inputBytes: bytes);
+    String text = PdfTextExtractor(document).extractText();
+    document.dispose();
+    return text;
+  }
+
   /// Injects text into a specific page at given coordinates
   static Future<Uint8List> addTextToPage({
     required Uint8List bytes,
@@ -53,7 +62,12 @@ class PdfService {
     final PdfDocument finalDoc = PdfDocument();
     for (var docBytes in documents) {
       final PdfDocument inputDoc = PdfDocument(inputBytes: docBytes);
-      finalDoc.importPages(inputDoc, 0, inputDoc.pages.count - 1, finalDoc.pages.count);
+      for (int i = 0; i < inputDoc.pages.count; i++) {
+        final PdfPage page = finalDoc.pages.add();
+        final PdfTemplate template = inputDoc.pages[i].createTemplate();
+        page.graphics.drawPdfTemplate(template, const Offset(0, 0));
+      }
+      inputDoc.dispose();
     }
     final List<int> bytes = await finalDoc.save();
     finalDoc.dispose();

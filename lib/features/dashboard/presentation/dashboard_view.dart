@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/cyberpunk_theme.dart';
 import '../../../core/providers/storage_providers.dart';
 import '../../library/domain/models/document_record.dart';
+import '../../pdf_editor/presentation/pdf_workspace_view.dart';
+import '../../pdf_editor/controller/pdf_state_controller.dart';
 import 'dart:io';
 
 class DashboardView extends ConsumerWidget {
@@ -26,14 +29,10 @@ class DashboardView extends ConsumerWidget {
                 children: [
                   _buildQuickActions(context, ref),
                   const SizedBox(height: 32),
-                  const Text(
-                    "RECENT DOCUMENTS",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
+                  Text(
+                    "RECENT_SESSIONS //",
+                    style: CyberpunkTheme.neonTextStyle(fontSize: 14, bold: true),
+                  ).animate().shimmer(duration: 2.seconds),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -44,7 +43,10 @@ class DashboardView extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
-                  (context, index) => _DocumentTile(doc: docs[index]),
+                  (context, index) => _DocumentTile(doc: docs[index])
+                      .animate()
+                      .fadeIn(delay: (index * 100).ms)
+                      .slideX(begin: 0.2, end: 0),
                   childCount: docs.length,
                 ),
               ),
@@ -67,19 +69,15 @@ class DashboardView extends ConsumerWidget {
   }
 
   Widget _buildAppBar() {
-    return const SliverAppBar(
+    return SliverAppBar(
       backgroundColor: Colors.transparent,
       expandedHeight: 120,
       floating: true,
       flexibleSpace: FlexibleSpaceBar(
-        titlePadding: EdgeInsets.only(left: 24, bottom: 16),
+        titlePadding: const EdgeInsets.only(left: 24, bottom: 16),
         title: Text(
-          "WORKSPACE",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: 24,
-          ),
+          "CORE_WORKSPACE",
+          style: CyberpunkTheme.neonTextStyle(fontSize: 24, bold: true),
         ),
       ),
     );
@@ -97,19 +95,19 @@ class DashboardView extends ConsumerWidget {
         const SizedBox(width: 16),
         _QuickActionCard(
           icon: Icons.auto_awesome,
-          label: "AI Chat",
+          label: "AI Neural",
           color: CyberpunkTheme.neonPink,
           onTap: () {},
         ),
         const SizedBox(width: 16),
         _QuickActionCard(
           icon: Icons.grid_view,
-          label: "Merge",
-          color: Colors.amber,
+          label: "Sync Matrix",
+          color: CyberpunkTheme.neonYellow,
           onTap: () {},
         ),
       ],
-    );
+    ).animate().fadeIn().slideY(begin: 0.2, end: 0);
   }
 
   Future<void> _handleImport(WidgetRef ref) async {
@@ -152,22 +150,18 @@ class _QuickActionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 20),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+          decoration: CyberpunkTheme.glassDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.3)),
+            borderColor: color.withOpacity(0.5),
+            showGlow: true,
           ),
           child: Column(
             children: [
               Icon(icon, color: color, size: 28),
               const SizedBox(height: 8),
               Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
+                label.toUpperCase(),
+                style: CyberpunkTheme.neonTextStyle(color: color, fontSize: 10, bold: true),
               ),
             ],
           ),
@@ -186,12 +180,26 @@ class _DocumentTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+      decoration: CyberpunkTheme.glassDecoration(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12),
+        borderColor: Colors.white24,
       ),
       child: ListTile(
+        onTap: () async {
+          final file = File(doc.filePath);
+          if (await file.exists()) {
+            final bytes = await file.readAsBytes();
+            final controller = PdfStateController();
+            controller.loadDocument(bytes);
+            if (!context.mounted) return;
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PdfWorkspaceView(stateController: controller),
+              ),
+            );
+          }
+        },
         leading: Container(
           width: 40,
           height: 40,

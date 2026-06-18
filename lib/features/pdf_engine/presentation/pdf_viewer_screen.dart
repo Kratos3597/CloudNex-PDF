@@ -134,10 +134,10 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
               pageLayoutMode: PdfPageLayoutMode.continuous,
             ),
           ),
-          if (_showAiPanel && isDesktop) const AiAssistantPanel(),
+          if (_showAiPanel && isDesktop) AiAssistantPanel(pdfBytes: _currentDocumentBytes),
         ],
       ),
-      endDrawer: !isDesktop ? const Drawer(child: AiAssistantPanel()) : null,
+      endDrawer: !isDesktop ? Drawer(child: AiAssistantPanel(pdfBytes: _currentDocumentBytes)) : null,
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
@@ -173,7 +173,7 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
       backgroundColor: CyberpunkTheme.backgroundDark,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color, width: 2),
+        side: BorderSide(color: color, width: 2),
       ),
       child: Icon(icon, color: color),
     );

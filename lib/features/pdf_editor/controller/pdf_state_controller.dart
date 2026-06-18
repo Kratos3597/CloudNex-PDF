@@ -5,7 +5,7 @@ import '../services/pdf_cache_service.dart';
 
 import '../services/pdf_modifier_service.dart';
 
-enum ActivePdfTool { none, draw, highlight, signaturePlacement }
+enum ActivePdfTool { none, draw, highlight, signaturePlacement, imagePlacement }
 
 class PdfStateController extends ChangeNotifier {
   Uint8List? _currentBytes;
@@ -60,6 +60,12 @@ class PdfStateController extends ChangeNotifier {
   void setupSignaturePlacement(Uint8List graphicBytes) {
     _activeSignatureGraphicBytes = graphicBytes;
     _currentTool = ActivePdfTool.signaturePlacement;
+    notifyListeners();
+  }
+
+  void setupImagePlacement(Uint8List imageBytes) {
+    _activeSignatureGraphicBytes = imageBytes;
+    _currentTool = ActivePdfTool.imagePlacement;
     notifyListeners();
   }
 
