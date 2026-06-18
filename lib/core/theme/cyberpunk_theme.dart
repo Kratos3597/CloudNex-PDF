@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class CyberpunkTheme {
   CyberpunkTheme._();
@@ -59,15 +60,27 @@ class CyberpunkTheme {
     Color color = neonCyan,
     double fontSize = 14,
     bool bold = false,
+    bool italic = false,
   }) {
     return TextStyle(
       color: color,
       fontSize: fontSize,
       fontFamily: 'monospace',
       fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+      fontStyle: italic ? FontStyle.italic : FontStyle.normal,
       shadows: [
         Shadow(color: color.withOpacity(0.5), blurRadius: 8),
       ],
     );
+  }
+
+  static Widget glitchText(String text, {TextStyle? style}) {
+    return text.split('').map((char) {
+      return Text(char, style: style);
+    }).toList().asMap().entries.map((entry) {
+      return entry.value.animate(onPlay: (controller) => controller.repeat())
+          .shimmer(duration: 2.seconds, color: neonPink.withOpacity(0.2))
+          .shake(duration: 100.ms, hz: 4, offset: const Offset(1, 0));
+    }).toList().last; // Simplified glitch effect
   }
 }

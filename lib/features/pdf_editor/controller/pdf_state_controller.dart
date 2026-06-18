@@ -49,9 +49,10 @@ class PdfStateController extends ChangeNotifier {
   }
 
   void _updateSecurityReport() {
-    if (_currentBytes != null) {
+    final bytes = _currentBytes;
+    if (bytes != null) {
       _securityReport = PdfModifierService.analyzeDocumentStructure(
-        _currentBytes!,
+        bytes,
         _activeDocumentPassword,
       );
     }
@@ -92,8 +93,9 @@ class PdfStateController extends ChangeNotifier {
   }
 
   void commitMutation(Uint8List mutatedBytes) {
-    if (_currentBytes != null) {
-      _undoStack.add(_currentBytes!);
+    final bytes = _currentBytes;
+    if (bytes != null) {
+      _undoStack.add(bytes);
     }
     _currentBytes = mutatedBytes;
     _redoStack.clear();

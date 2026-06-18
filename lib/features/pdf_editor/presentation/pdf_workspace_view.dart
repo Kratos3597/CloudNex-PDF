@@ -5,8 +5,11 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../../../core/theme/cyberpunk_theme.dart';
 import '../controller/pdf_state_controller.dart';
 import '../services/pdf_modifier_service.dart';
+import '../../../services/pdf_service.dart';
 import 'signature_pad_view.dart';
 import '../../ai_assistant/presentation/ai_panel.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class PdfWorkspaceView extends StatefulWidget {
   final PdfStateController stateController;
@@ -46,6 +49,60 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     final currentBytes = widget.stateController.currentBytes;
     if (currentBytes == null) return;
     await PdfModifierService.shareDocumentViaSystemSheet(bytes: currentBytes, fileName: 'cloudnex_shared.pdf');
+  }
+
+  Future<void> _handleOcr() async {
+    final currentBytes = widget.stateController.currentBytes;
+    if (currentBytes == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator(color: CyberpunkTheme.neonCyan)),
+    );
+
+    try {
+      final ocrResult = await PdfService.performOCR(currentBytes);
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: CyberpunkTheme.backgroundDark,
+          title: Text("OCR_EXTRACTION_SUCCESS //", style: CyberpunkTheme.neonTextStyle(fontSize: 14)),
+          content: SingleChildScrollView(
+            child: Text(ocrResult, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("CLOSE", style: CyberpunkTheme.neonTextStyle(color: CyberpunkTheme.neonPink)),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("OCR_FAILED: $e")));
+    }
+  }
+
+  Future<void> _handleDataExport() async {
+    final currentBytes = widget.stateController.currentBytes;
+    if (currentBytes == null) return;
+
+    final csv = PdfService.exportToCsv(currentBytes);
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File("${directory.path}/exported_data_${DateTime.now().millisecondsSinceEpoch}.csv");
+    await file.writeAsString(csv);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      backgroundColor: CyberpunkTheme.backgroundDark,
+      content: Text("// DATA_EXPORTED: ${file.path}", style: CyberpunkTheme.neonTextStyle(color: CyberpunkTheme.neonGreen)),
+    ));
   }
 
   Future<void> _applyGraphicSignature({required int pageIndex, required double x, required double y}) async {
@@ -192,6 +249,16 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
               onPressed: _pickImageForPlacement,
               isActive: widget.stateController.currentTool ==
                   ActivePdfTool.imagePlacement,
+            ),
+            const SizedBox(height: 12),
+            _buildToolButton(
+              icon: Icons.document_scanner,
+              onPressed: _handleOcr,
+            ),
+            const SizedBox(height: 12),
+            _buildToolButton(
+              icon: Icons.table_view,
+              onPressed: _handleDataExport,
             ),
             const SizedBox(height: 12),
             _buildToolButton(

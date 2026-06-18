@@ -31,29 +31,37 @@ class _WorkspaceShellState extends ConsumerState<WorkspaceShell> {
     final isTablet = MediaQuery.of(context).size.width > 600 && MediaQuery.of(context).size.width <= 1100;
 
     return Scaffold(
+      backgroundColor: CyberpunkTheme.backgroundDark,
       body: Row(
         children: [
           if (isDesktop || isTablet)
-            _buildSidebar(isDesktop),
+            _buildSidebar(isDesktop).animate().slideX(begin: -1, end: 0, duration: 600.ms, curve: Curves.easeOut),
           Expanded(
-            child: _pages[_selectedIndex],
+            child: _pages[_selectedIndex].animate(key: ValueKey(_selectedIndex)).fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0),
           ),
         ],
       ),
       bottomNavigationBar: (!isDesktop && !isTablet)
-          ? BottomNavigationBar(
-              currentIndex: _selectedIndex,
-              onTap: (index) => setState(() => _selectedIndex = index),
-              selectedItemColor: CyberpunkTheme.neonCyan,
-              unselectedItemColor: Colors.grey,
-              backgroundColor: CyberpunkTheme.backgroundDark,
-              type: BottomNavigationBarType.fixed,
-              items: const [
-                BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Home'),
-                BottomNavigationBarItem(icon: Icon(Icons.folder), label: 'Files'),
-                BottomNavigationBarItem(icon: Icon(Icons.smart_toy), label: 'AI'),
-                BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Data'),
-              ],
+          ? Container(
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: CyberpunkTheme.neonCyan.withOpacity(0.2), width: 1)),
+              ),
+              child: BottomNavigationBar(
+                currentIndex: _selectedIndex,
+                onTap: (index) => setState(() => _selectedIndex = index),
+                selectedItemColor: CyberpunkTheme.neonCyan,
+                unselectedItemColor: Colors.white24,
+                backgroundColor: CyberpunkTheme.backgroundDark,
+                type: BottomNavigationBarType.fixed,
+                selectedLabelStyle: CyberpunkTheme.neonTextStyle(fontSize: 10, bold: true),
+                unselectedLabelStyle: const TextStyle(fontSize: 10, fontFamily: 'monospace'),
+                items: const [
+                  BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'HOME'),
+                  BottomNavigationBarItem(icon: Icon(Icons.folder_outlined), activeIcon: Icon(Icons.folder), label: 'FILES'),
+                  BottomNavigationBarItem(icon: Icon(Icons.smart_toy_outlined), activeIcon: Icon(Icons.smart_toy), label: 'NEURAL'),
+                  BottomNavigationBarItem(icon: Icon(Icons.bar_chart_outlined), activeIcon: Icon(Icons.bar_chart), label: 'DATA'),
+                ],
+              ),
             )
           : null,
     );
@@ -118,15 +126,13 @@ class _WorkspaceShellState extends ConsumerState<WorkspaceShell> {
 
   Widget _buildSidebarLogo() {
     return _isSidebarExpanded
-        ? const Text(
-            "CLOUDNEX",
-            style: TextStyle(
-              color: CyberpunkTheme.neonCyan,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
+        ? Text(
+            "CLOUDNEX_OS",
+            style: CyberpunkTheme.neonTextStyle(
+              fontSize: 18,
+              bold: true,
             ),
-          )
+          ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 3.seconds, color: CyberpunkTheme.neonCyan.withOpacity(0.3))
         : const Icon(Icons.cloud, color: CyberpunkTheme.neonCyan, size: 32);
   }
 

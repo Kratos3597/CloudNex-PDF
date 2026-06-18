@@ -112,7 +112,7 @@ class PdfModifierService {
     try {
       doc = PdfDocument(inputBytes: bytes, password: password);
       
-      if (page >= doc.pages.count) {
+      if (page < 0 || page >= doc.pages.count) {
         throw Exception('Page index out of range');
       }
 

@@ -15,6 +15,7 @@ dependencies:
   syncfusion_flutter_pdfviewer: ^27.1.1
   syncfusion_flutter_pdf: ^27.1.1
   syncfusion_flutter_core: ^27.1.1
+  pdfx: ^2.7.0
 
   # State Management
   flutter_riverpod: ^2.5.1
@@ -27,6 +28,7 @@ dependencies:
 
   # AI Integration
   google_generative_ai: ^0.4.5
+  google_mlkit_text_recognition: ^0.13.0
 
   # UI & UX
   flutter_animate: ^4.5.0
