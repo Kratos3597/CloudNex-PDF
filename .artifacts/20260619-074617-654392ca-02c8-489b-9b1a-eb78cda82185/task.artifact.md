@@ -1,11 +1,14 @@
-# Task Management
+# Task Management - Debug APK & UI Polish
 
-- [x] Part 1: Tabs, Annotations, HUD
-- [x] Part 2: Forms, Generation Engine, OCR
-- [x] Part 3: AI Assistant Refinements & Semantic Search
-- [x] Part 4: Performance & Cloud Sync
-- [ ] Part 5: Collaboration, Analytics & Final Polish
-    - [ ] Implement Review Mode & Shared Comments (UI simulation)
-    - [ ] Create Analytics Dashboard with Charts
-    - [ ] Implement Audit Trail logic
-    - [ ] Final UI/UX Consistency check
+- [/] UI/UX Scaling & Responsiveness
+    - [ ] Implement Full-Screen Scaling (Edge-to-Edge)
+    - [ ] Add Tablet Landscape Mode support
+    - [ ] Refine 'Apple-style' Dynamic Glass UI
+- [ ] Bug Fixes & Feature Enhancements
+    - [ ] Fix OCR PlatformException (InputImageConverterError)
+    - [ ] Implement Folder Selection for Excel/Word exports
+    - [ ] Reorganize Bottom Navigation Menu
+- [ ] Build & Deployment
+    - [ ] Final Analyze & Build Check
+    - [ ] Compile Debug APK
+    - [ ] Push to GitHub

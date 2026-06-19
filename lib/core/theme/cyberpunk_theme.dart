@@ -6,17 +6,17 @@ class CyberpunkTheme {
   CyberpunkTheme._();
 
   static const Color backgroundDark = Color(0xFF020205);
-  static const Color surfaceTranslucent = Color(0x220D0D1A);
+  static const Color surfaceTranslucent = Color(0x331A1A2E); // Slightly more opacity for Apple feel
 
   static const Color neonCyan = Color(0xFF00F0FF);
   static const Color neonPink = Color(0xFFFF007F);
   static const Color neonGreen = Color(0xFF39FF14);
   static const Color neonYellow = Color(0xFFF3E600);
   static const Color textPrimary = Color(0xFFF5F5FA);
-  static const Color textSecondary = Color(0x8AFFFFFF);
+  static const Color textSecondary = Color(0xAABBBBCB);
 
-  static const double blurSigmaX = 20.0;
-  static const double blurSigmaY = 20.0;
+  static const double blurSigmaX = 25.0; // Higher blur for Apple effect
+  static const double blurSigmaY = 25.0;
 
   static ImageFilter get glassBlurFilter =>
       ImageFilter.blur(sigmaX: blurSigmaX, sigmaY: blurSigmaY);
@@ -28,9 +28,14 @@ class CyberpunkTheme {
         primary: neonCyan,
         secondary: neonPink,
         surface: backgroundDark,
+        onSurface: textPrimary,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
       textTheme: const TextTheme(
-        bodyLarge: TextStyle(color: textPrimary, fontFamily: 'monospace'),
+        bodyLarge: TextStyle(color: textPrimary, fontFamily: 'monospace', letterSpacing: 0.5),
         bodyMedium: TextStyle(color: textSecondary, fontFamily: 'monospace'),
       ),
     );
@@ -38,18 +43,26 @@ class CyberpunkTheme {
 
   static BoxDecoration glassDecoration({
     BorderRadius? borderRadius,
-    Color borderColor = const Color(0x3300F0FF),
+    Color borderColor = const Color(0x22FFFFFF), // Subtler white border
     bool showGlow = false,
   }) {
     return BoxDecoration(
       color: surfaceTranslucent,
-      borderRadius: borderRadius ?? BorderRadius.circular(4.0),
-      border: Border.all(color: borderColor.withValues(alpha: 0.5), width: 1.5),
+      borderRadius: borderRadius ?? BorderRadius.circular(12.0), // Rounded corners
+      border: Border.all(color: borderColor, width: 0.5), // Hairline border
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withValues(alpha: 0.05),
+          Colors.transparent,
+        ],
+      ),
       boxShadow: [
         if (showGlow)
           BoxShadow(
-            color: borderColor.withValues(alpha: 0.3),
-            blurRadius: 12.0,
+            color: borderColor.withValues(alpha: 0.2),
+            blurRadius: 15.0,
             spreadRadius: 1.0,
           ),
       ],

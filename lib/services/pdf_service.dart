@@ -20,23 +20,28 @@ class PdfService {
     final px.PdfDocument document = await px.PdfDocument.openData(bytes);
     final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
     String fullText = "";
+    
+    final tempDir = await getTemporaryDirectory();
 
     for (int i = 1; i <= document.pagesCount; i++) {
       final page = await document.getPage(i);
-      final pageImage = await page.render(width: page.width * 2, height: page.height * 2);
+      // Higher scale for better OCR accuracy
+      final pageImage = await page.render(
+        width: page.width * 2, 
+        height: page.height * 2,
+      );
       
       if (pageImage != null) {
-        final inputImage = InputImage.fromBytes(
-          bytes: pageImage.bytes,
-          metadata: InputImageMetadata(
-            size: Size(pageImage.width!.toDouble(), pageImage.height!.toDouble()),
-            rotation: InputImageRotation.rotation0deg,
-            format: InputImageFormat.bgra8888,
-            bytesPerRow: pageImage.width! * 4,
-          ),
-        );
+        // Save to temp file to avoid PlatformException(InputImageConverterError)
+        final tempFile = File('${tempDir.path}/ocr_page_$i.jpg');
+        await tempFile.writeAsBytes(pageImage.bytes);
+        
+        final inputImage = InputImage.fromFilePath(tempFile.path);
         final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
         fullText += recognizedText.text + "\n";
+        
+        // Clean up
+        if (await tempFile.exists()) await tempFile.delete();
       }
       await page.close();
     }

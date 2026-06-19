@@ -7,10 +7,13 @@ import 'features/workspace/presentation/workspace_shell.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Enable Edge-to-Edge display for modern scaling
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: CyberpunkTheme.backgroundDark,
+    systemNavigationBarColor: Colors.transparent, // Modern transparent bar
     systemNavigationBarIconBrightness: Brightness.light,
   ));
 

@@ -298,6 +298,16 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
               ),
               const SizedBox(height: 12),
               _buildToolButton(
+                icon: Icons.table_chart_rounded,
+                onPressed: () => _handleDataExport('EXCEL'),
+              ),
+              const SizedBox(height: 12),
+              _buildToolButton(
+                icon: Icons.description_rounded,
+                onPressed: () => _handleDataExport('WORD'),
+              ),
+              const SizedBox(height: 12),
+              _buildToolButton(
                 icon: Icons.save,
                 onPressed: _executeSystemSave,
               ),
@@ -452,6 +462,52 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("GEN_ERR: $e")));
+    }
+  }
+
+  Future<void> _handleDataExport(String format) async {
+    final currentBytes = widget.stateController.currentBytes;
+    final session = widget.stateController.activeSession;
+    if (currentBytes == null || session == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator(color: CyberpunkTheme.neonCyan)),
+    );
+
+    try {
+      String content = "";
+      String fileName = "";
+      
+      if (format == 'EXCEL') {
+        content = PdfService.exportToCsv(currentBytes);
+        fileName = "exported_data_${DateTime.now().millisecondsSinceEpoch}.csv";
+      } else {
+        content = PdfService.extractText(currentBytes);
+        fileName = "document_transcript_${DateTime.now().millisecondsSinceEpoch}.txt";
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      final bool success = await PdfModifierService.saveTextDataViaPicker(
+        text: content,
+        suggestedName: fileName,
+      );
+
+      if (!mounted) return;
+      if (success) {
+        analyticsService.logAction("EXPORT_${format}", session.fileName);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: CyberpunkTheme.backgroundDark,
+          content: Text("// ${format}_EXPORT_SUCCESSFUL", style: TextStyle(color: CyberpunkTheme.neonGreen)),
+        ));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("EXPORT_FAILED: $e")));
     }
   }
 

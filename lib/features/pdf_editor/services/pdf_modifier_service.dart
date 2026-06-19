@@ -147,6 +147,18 @@ class PdfModifierService {
     return path != null;
   }
 
+  static Future<bool> saveTextDataViaPicker({
+    required String text,
+    required String suggestedName,
+  }) async {
+    final Uint8List bytes = Uint8List.fromList(text.codeUnits);
+    final String? path = await FilePicker.platform.saveFile(
+      fileName: suggestedName,
+      bytes: bytes,
+    );
+    return path != null;
+  }
+
   static Future<void> shareDocumentViaSystemSheet({
     required Uint8List bytes,
     required String fileName,

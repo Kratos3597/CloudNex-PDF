@@ -34,40 +34,56 @@ class _WorkspaceShellState extends ConsumerState<WorkspaceShell> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = MediaQuery.of(context).size.width > 1100;
-    final isTablet = MediaQuery.of(context).size.width > 600 && MediaQuery.of(context).size.width <= 1100;
+    final size = MediaQuery.of(context).size;
+    final isDesktop = size.width > 1100;
+    final isTablet = size.width > 600;
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+
+    // Use persistent sidebar for tablets in landscape or any screen > 1100px
+    final showSidebar = isDesktop || (isTablet && isLandscape);
 
     return Scaffold(
       backgroundColor: CyberpunkTheme.backgroundDark,
+      extendBody: true, // Allows glass effect to flow behind bottom nav
       body: Row(
         children: [
-          if (isDesktop || isTablet)
-            _buildSidebar(isDesktop).animate().slideX(begin: -1, end: 0, duration: 600.ms, curve: Curves.easeOut),
+          if (showSidebar)
+            _buildSidebar(isDesktop || isTablet).animate().slideX(begin: -1, end: 0, duration: 600.ms, curve: Curves.easeOut),
           Expanded(
-            child: _pages[_selectedIndex].animate(key: ValueKey(_selectedIndex)).fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0),
+            child: _pages[_selectedIndex].animate(key: ValueKey(_selectedIndex)).fadeIn(duration: 400.ms).slideY(begin: 0.02, end: 0),
           ),
         ],
       ),
-      bottomNavigationBar: (!isDesktop && !isTablet)
+      bottomNavigationBar: !showSidebar
           ? Container(
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: CyberpunkTheme.neonCyan.withValues(alpha: 0.2), width: 1)),
+              margin: const EdgeInsets.fromLTRB(24, 0, 24, 30), // Floating Apple-style
+              height: 64,
+              decoration: CyberpunkTheme.glassDecoration(
+                borderRadius: BorderRadius.circular(32),
+                borderColor: Colors.white10,
               ),
-              child: BottomNavigationBar(
-                currentIndex: _selectedIndex,
-                onTap: (index) => setState(() => _selectedIndex = index),
-                selectedItemColor: CyberpunkTheme.neonCyan,
-                unselectedItemColor: Colors.white24,
-                backgroundColor: CyberpunkTheme.backgroundDark,
-                type: BottomNavigationBarType.fixed,
-                selectedLabelStyle: CyberpunkTheme.neonTextStyle(fontSize: 10, bold: true),
-                unselectedLabelStyle: const TextStyle(fontSize: 10, fontFamily: 'monospace'),
-                items: const [
-                  BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'HOME'),
-                  BottomNavigationBarItem(icon: Icon(Icons.folder_outlined), activeIcon: Icon(Icons.folder), label: 'FILES'),
-                  BottomNavigationBarItem(icon: Icon(Icons.smart_toy_outlined), activeIcon: Icon(Icons.smart_toy), label: 'NEURAL'),
-                  BottomNavigationBarItem(icon: Icon(Icons.bar_chart_outlined), activeIcon: Icon(Icons.bar_chart), label: 'DATA'),
-                ],
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(32),
+                child: BackdropFilter(
+                  filter: CyberpunkTheme.glassBlurFilter,
+                  child: BottomNavigationBar(
+                    currentIndex: _selectedIndex,
+                    onTap: (index) => setState(() => _selectedIndex = index),
+                    selectedItemColor: CyberpunkTheme.neonCyan,
+                    unselectedItemColor: Colors.white24,
+                    backgroundColor: Colors.transparent, // Important for glass
+                    elevation: 0,
+                    type: BottomNavigationBarType.fixed,
+                    showSelectedLabels: false,
+                    showUnselectedLabels: false,
+                    items: const [
+                      BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: 'HOME'),
+                      BottomNavigationBarItem(icon: Icon(Icons.folder_copy_rounded), label: 'FILES'),
+                      BottomNavigationBarItem(icon: Icon(Icons.bubble_chart_rounded), label: 'NEURAL'),
+                      BottomNavigationBarItem(icon: Icon(Icons.insights_rounded), label: 'DATA'),
+                    ],
+                  ),
+                ),
               ),
             )
           : null,
