@@ -1,3 +1,4 @@
+import 'package:cloudnex_pdf_reader/services/cloud_sync_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -17,6 +18,12 @@ class WorkspaceShell extends ConsumerStatefulWidget {
 class _WorkspaceShellState extends ConsumerState<WorkspaceShell> {
   int _selectedIndex = 0;
   bool _isSidebarExpanded = true;
+
+  @override
+  void initState() {
+    super.initState();
+    cloudSyncProvider.startAutoSync();
+  }
 
   final List<Widget> _pages = [
     const DashboardView(),
@@ -44,7 +51,7 @@ class _WorkspaceShellState extends ConsumerState<WorkspaceShell> {
       bottomNavigationBar: (!isDesktop && !isTablet)
           ? Container(
               decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: CyberpunkTheme.neonCyan.withOpacity(0.2), width: 1)),
+                border: Border(top: BorderSide(color: CyberpunkTheme.neonCyan.withValues(alpha: 0.2), width: 1)),
               ),
               child: BottomNavigationBar(
                 currentIndex: _selectedIndex,
@@ -75,7 +82,7 @@ class _WorkspaceShellState extends ConsumerState<WorkspaceShell> {
       width: width,
       decoration: BoxDecoration(
         color: CyberpunkTheme.backgroundDark,
-        border: Border(right: BorderSide(color: Colors.white.withOpacity(0.1))),
+        border: Border(right: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
       ),
       child: Column(
         children: [
@@ -132,17 +139,44 @@ class _WorkspaceShellState extends ConsumerState<WorkspaceShell> {
               fontSize: 18,
               bold: true,
             ),
-          ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 3.seconds, color: CyberpunkTheme.neonCyan.withOpacity(0.3))
+          ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 3.seconds, color: CyberpunkTheme.neonCyan.withValues(alpha: 0.3))
         : const Icon(Icons.cloud, color: CyberpunkTheme.neonCyan, size: 32);
   }
 
   Widget _buildCollapseButton() {
-    return IconButton(
-      icon: Icon(
-        _isSidebarExpanded ? Icons.chevron_left : Icons.chevron_right,
-        color: Colors.white54,
-      ),
-      onPressed: () => setState(() => _isSidebarExpanded = !_isSidebarExpanded),
+    return Column(
+      children: [
+        ListenableBuilder(
+          listenable: cloudSyncProvider,
+          builder: (context, _) {
+            if (!cloudSyncProvider.isSyncing) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    width: 10,
+                    height: 10,
+                    child: CircularProgressIndicator(strokeWidth: 1, color: CyberpunkTheme.neonCyan),
+                  ),
+                  if (_isSidebarExpanded) ...[
+                    const SizedBox(width: 8),
+                    Text("SYNCING...", style: CyberpunkTheme.neonTextStyle(fontSize: 8)),
+                  ]
+                ],
+              ),
+            );
+          },
+        ),
+        IconButton(
+          icon: Icon(
+            _isSidebarExpanded ? Icons.chevron_left : Icons.chevron_right,
+            color: Colors.white54,
+          ),
+          onPressed: () => setState(() => _isSidebarExpanded = !_isSidebarExpanded),
+        ),
+      ],
     );
   }
 }
@@ -172,7 +206,7 @@ class _SidebarItem extends StatelessWidget {
         child: Container(
           height: 48,
           decoration: BoxDecoration(
-            color: isSelected ? CyberpunkTheme.neonCyan.withOpacity(0.1) : Colors.transparent,
+            color: isSelected ? CyberpunkTheme.neonCyan.withValues(alpha: 0.1) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(

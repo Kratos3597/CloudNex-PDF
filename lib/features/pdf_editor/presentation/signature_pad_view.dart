@@ -126,8 +126,9 @@ class _SignaturePadViewState extends State<SignaturePadView> {
                           ),
                           onPressed: () async {
                             final bytes = await _exportCanvasToPngBytes();
-                            if (context.mounted)
+                            if (context.mounted) {
                               Navigator.of(context).pop(bytes);
+                            }
                           },
                           child: const Text('INJECT',
                               style: TextStyle(

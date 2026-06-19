@@ -59,8 +59,9 @@ class PdfModifierService {
 
       final int totalPages = document.pages.count;
 
-      final String author =
-          document.documentInformation.author ?? 'UNVERIFIED';
+      final String author = document.documentInformation.author.isEmpty
+          ? 'UNVERIFIED'
+          : document.documentInformation.author;
 
       return PdfSecurityReport(
         isEncrypted: isEncrypted,

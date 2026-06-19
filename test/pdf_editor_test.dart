@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/features/pdf_editor/controller/pdf_state_controller.dart';
-import '../lib/features/pdf_editor/services/pdf_modifier_service.dart';
+import 'package:cloudnex_pdf_reader/features/pdf_editor/controller/pdf_state_controller.dart';
+import 'package:cloudnex_pdf_reader/features/pdf_editor/services/pdf_modifier_service.dart';
 
 void main() {
   group('PdfEditor Core Engine Tests', () {

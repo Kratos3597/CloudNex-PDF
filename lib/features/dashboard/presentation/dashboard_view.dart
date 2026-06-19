@@ -1,3 +1,4 @@
+import 'package:cloudnex_pdf_reader/core/providers/pdf_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -15,6 +16,7 @@ class DashboardView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final documentsAsync = ref.watch(documentListProvider);
+    final pdfState = ref.watch(pdfStateProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -43,7 +45,7 @@ class DashboardView extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
-                  (context, index) => _DocumentTile(doc: docs[index])
+                  (context, index) => _DocumentTile(doc: docs[index], pdfState: pdfState)
                       .animate()
                       .fadeIn(delay: (index * 100).ms)
                       .slideX(begin: 0.2, end: 0),
@@ -152,7 +154,7 @@ class _QuickActionCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 20),
           decoration: CyberpunkTheme.glassDecoration(
             borderRadius: BorderRadius.circular(16),
-            borderColor: color.withOpacity(0.5),
+            borderColor: color.withValues(alpha: 0.5),
             showGlow: true,
           ),
           child: Column(
@@ -173,8 +175,9 @@ class _QuickActionCard extends StatelessWidget {
 
 class _DocumentTile extends StatelessWidget {
   final DocumentRecord doc;
+  final PdfStateController pdfState;
 
-  const _DocumentTile({required this.doc});
+  const _DocumentTile({required this.doc, required this.pdfState});
 
   @override
   Widget build(BuildContext context) {
@@ -189,13 +192,12 @@ class _DocumentTile extends StatelessWidget {
           final file = File(doc.filePath);
           if (await file.exists()) {
             final bytes = await file.readAsBytes();
-            final controller = PdfStateController();
-            controller.loadDocument(bytes);
+            pdfState.openDocument(bytes, doc.fileName);
             if (!context.mounted) return;
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => PdfWorkspaceView(stateController: controller),
+                builder: (context) => PdfWorkspaceView(stateController: pdfState),
               ),
             );
           }
@@ -204,7 +206,7 @@ class _DocumentTile extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: CyberpunkTheme.neonCyan.withOpacity(0.1),
+            color: CyberpunkTheme.neonCyan.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Icon(Icons.picture_as_pdf, color: CyberpunkTheme.neonCyan, size: 20),

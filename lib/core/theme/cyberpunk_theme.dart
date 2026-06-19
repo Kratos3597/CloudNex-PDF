@@ -44,11 +44,11 @@ class CyberpunkTheme {
     return BoxDecoration(
       color: surfaceTranslucent,
       borderRadius: borderRadius ?? BorderRadius.circular(4.0),
-      border: Border.all(color: borderColor.withOpacity(0.5), width: 1.5),
+      border: Border.all(color: borderColor.withValues(alpha: 0.5), width: 1.5),
       boxShadow: [
         if (showGlow)
           BoxShadow(
-            color: borderColor.withOpacity(0.3),
+            color: borderColor.withValues(alpha: 0.3),
             blurRadius: 12.0,
             spreadRadius: 1.0,
           ),
@@ -69,7 +69,7 @@ class CyberpunkTheme {
       fontWeight: bold ? FontWeight.bold : FontWeight.normal,
       fontStyle: italic ? FontStyle.italic : FontStyle.normal,
       shadows: [
-        Shadow(color: color.withOpacity(0.5), blurRadius: 8),
+        Shadow(color: color.withValues(alpha: 0.5), blurRadius: 8),
       ],
     );
   }
@@ -79,7 +79,7 @@ class CyberpunkTheme {
       return Text(char, style: style);
     }).toList().asMap().entries.map((entry) {
       return entry.value.animate(onPlay: (controller) => controller.repeat())
-          .shimmer(duration: 2.seconds, color: neonPink.withOpacity(0.2))
+          .shimmer(duration: 2.seconds, color: neonPink.withValues(alpha: 0.2))
           .shake(duration: 100.ms, hz: 4, offset: const Offset(1, 0));
     }).toList().last; // Simplified glitch effect
   }

@@ -2,58 +2,106 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../services/pdf_cache_service.dart';
-
 import '../services/pdf_modifier_service.dart';
+import 'package:cloudnex_pdf_reader/features/analytics/services/analytics_service.dart';
 
-enum ActivePdfTool { none, draw, highlight, signaturePlacement, imagePlacement }
+enum ActivePdfTool { none, draw, highlight, underline, strikeout, signaturePlacement, imagePlacement }
+
+class PdfSession {
+  final String id;
+  final String fileName;
+  Uint8List? currentBytes;
+  final List<Uint8List> undoStack = [];
+  final List<Uint8List> redoStack = [];
+  final PdfViewerController pdfViewerController = PdfViewerController();
+  int activePageNumber = 1;
+  String? password;
+  PdfSecurityReport? securityReport;
+
+  PdfSession({
+    required this.id,
+    required this.fileName,
+    this.currentBytes,
+    this.password,
+  });
+
+  void dispose() {
+    pdfViewerController.dispose();
+  }
+}
 
 class PdfStateController extends ChangeNotifier {
-  Uint8List? _currentBytes;
-  final List<Uint8List> _undoStack = [];
-  final List<Uint8List> _redoStack = [];
-
-  final PdfViewerController pdfViewerController = PdfViewerController();
-  int _activePageNumber = 1;
+  final List<PdfSession> _sessions = [];
+  int _activeSessionIndex = -1;
 
   ActivePdfTool _currentTool = ActivePdfTool.none;
   Uint8List? _activeSignatureGraphicBytes;
-  String? _activeDocumentPassword;
-  
-  PdfSecurityReport? _securityReport;
 
-  Uint8List? get currentBytes => _currentBytes;
-  bool get canUndo => _undoStack.isNotEmpty;
-  bool get canRedo => _redoStack.isNotEmpty;
-  int get activePageNumber => _activePageNumber;
+  List<PdfSession> get sessions => _sessions;
+  int get activeSessionIndex => _activeSessionIndex;
+  
+  PdfSession? get activeSession => 
+      (_activeSessionIndex >= 0 && _activeSessionIndex < _sessions.length) 
+      ? _sessions[_activeSessionIndex] : null;
+
+  Uint8List? get currentBytes => activeSession?.currentBytes;
+  bool get canUndo => activeSession?.undoStack.isNotEmpty ?? false;
+  bool get canRedo => activeSession?.redoStack.isNotEmpty ?? false;
+  int get activePageNumber => activeSession?.activePageNumber ?? 1;
+  PdfViewerController? get pdfViewerController => activeSession?.pdfViewerController;
+  
   ActivePdfTool get currentTool => _currentTool;
   bool get isViewportLocked => _currentTool != ActivePdfTool.none;
   Uint8List? get activeSignatureGraphicBytes => _activeSignatureGraphicBytes;
-  String? get activeDocumentPassword => _activeDocumentPassword;
-  PdfSecurityReport? get securityReport => _securityReport;
+  String? get activeDocumentPassword => activeSession?.password;
+  PdfSecurityReport? get securityReport => activeSession?.securityReport;
 
-  void loadDocument(Uint8List initialBytes,
-      {String? password, int initialPage = 1}) {
-    _currentBytes = initialBytes;
-    _activeDocumentPassword = password;
-    _activePageNumber = initialPage;
-    _undoStack.clear();
-    _redoStack.clear();
-    _currentTool = ActivePdfTool.none;
-    _activeSignatureGraphicBytes = null;
+  void openDocument(Uint8List bytes, String fileName, {String? password}) {
+    final session = PdfSession(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      fileName: fileName,
+      currentBytes: bytes,
+      password: password,
+    );
     
-    _updateSecurityReport();
-
-    // Synergize instantly onto disk caching files
-    _triggerBackgroundCacheSync();
+    _sessions.add(session);
+    _activeSessionIndex = _sessions.length - 1;
+    _updateSecurityReport(session);
+    _triggerBackgroundCacheSync(session);
+    
+    analyticsService.logAction("OPEN_DOCUMENT", fileName);
     notifyListeners();
   }
 
-  void _updateSecurityReport() {
-    final bytes = _currentBytes;
-    if (bytes != null) {
-      _securityReport = PdfModifierService.analyzeDocumentStructure(
-        bytes,
-        _activeDocumentPassword,
+  void closeSession(int index) {
+    if (index < 0 || index >= _sessions.length) return;
+    
+    final session = _sessions.removeAt(index);
+    session.dispose();
+    
+    if (_activeSessionIndex >= _sessions.length) {
+      _activeSessionIndex = _sessions.length - 1;
+    }
+    
+    if (_sessions.isEmpty) {
+      _activeSessionIndex = -1;
+    }
+    
+    notifyListeners();
+  }
+
+  void switchToSession(int index) {
+    if (index >= 0 && index < _sessions.length) {
+      _activeSessionIndex = index;
+      notifyListeners();
+    }
+  }
+
+  void _updateSecurityReport(PdfSession session) {
+    if (session.currentBytes != null) {
+      session.securityReport = PdfModifierService.analyzeDocumentStructure(
+        session.currentBytes!,
+        session.password,
       );
     }
   }
@@ -86,69 +134,73 @@ class PdfStateController extends ChangeNotifier {
   }
 
   void updatePageNumber(int pageNum) {
-    if (_activePageNumber == pageNum) return;
-    _activePageNumber = pageNum;
-    _triggerBackgroundCacheSync();
+    final session = activeSession;
+    if (session == null || session.activePageNumber == pageNum) return;
+    session.activePageNumber = pageNum;
+    _triggerBackgroundCacheSync(session);
     notifyListeners();
   }
 
   void commitMutation(Uint8List mutatedBytes) {
-    final bytes = _currentBytes;
-    if (bytes != null) {
-      _undoStack.add(bytes);
+    final session = activeSession;
+    if (session == null) return;
+
+    if (session.currentBytes != null) {
+      session.undoStack.add(session.currentBytes!);
     }
-    _currentBytes = mutatedBytes;
-    _redoStack.clear();
-    _updateSecurityReport();
-    _triggerBackgroundCacheSync();
+    session.currentBytes = mutatedBytes;
+    session.redoStack.clear();
+    _updateSecurityReport(session);
+    _triggerBackgroundCacheSync(session);
+    
+    analyticsService.logAction("MODIFY_DOCUMENT", session.fileName);
     notifyListeners();
   }
 
-  /// Triggers a non-blocking background write out to disk files
-  void _triggerBackgroundCacheSync() {
-    if (_currentBytes == null) return;
+  void _triggerBackgroundCacheSync(PdfSession session) {
+    if (session.currentBytes == null) return;
     PdfCacheService.writeRecoverySession(
-      bytes: _currentBytes!,
-      activePage: _activePageNumber,
-      password: _activeDocumentPassword,
+      bytes: session.currentBytes!,
+      activePage: session.activePageNumber,
+      password: session.password,
     );
   }
 
-  /// Invoked when exporting or exiting intentionally to destroy session remnants
   void clearActiveSessionCache() {
     PdfCacheService.purgeRecoverySession();
   }
 
   void undo() {
-    if (!canUndo) return;
-    final previousState = _undoStack.removeLast();
-    if (_currentBytes != null) {
-      _redoStack.add(_currentBytes!);
+    final session = activeSession;
+    if (session == null || session.undoStack.isEmpty) return;
+    
+    final previousState = session.undoStack.removeLast();
+    if (session.currentBytes != null) {
+      session.redoStack.add(session.currentBytes!);
     }
-    _currentBytes = previousState;
-    _triggerBackgroundCacheSync();
+    session.currentBytes = previousState;
+    _triggerBackgroundCacheSync(session);
     notifyListeners();
   }
 
   void redo() {
-    if (!canRedo) return;
-    final nextState = _redoStack.removeLast();
-    if (_currentBytes != null) {
-      _undoStack.add(_currentBytes!);
+    final session = activeSession;
+    if (session == null || session.redoStack.isEmpty) return;
+
+    final nextState = session.redoStack.removeLast();
+    if (session.currentBytes != null) {
+      session.undoStack.add(session.currentBytes!);
     }
-    _currentBytes = nextState;
-    _triggerBackgroundCacheSync();
+    session.currentBytes = nextState;
+    _triggerBackgroundCacheSync(session);
     notifyListeners();
   }
 
   @override
   void dispose() {
-    pdfViewerController.dispose();
-    _undoStack.clear();
-    _redoStack.clear();
-    _currentBytes = null;
-    _activeSignatureGraphicBytes = null;
-    _activeDocumentPassword = null;
+    for (var session in _sessions) {
+      session.dispose();
+    }
     super.dispose();
   }
 }

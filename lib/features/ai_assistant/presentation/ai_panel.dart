@@ -52,12 +52,13 @@ class _AiAssistantPanelState extends ConsumerState<AiAssistantPanel> {
     return Container(
       width: 400,
       decoration: BoxDecoration(
-        color: CyberpunkTheme.backgroundDark.withOpacity(0.9),
-        border: Border(left: BorderSide(color: CyberpunkTheme.neonCyan.withOpacity(0.2))),
+        color: CyberpunkTheme.backgroundDark.withValues(alpha: 0.9),
+        border: Border(left: BorderSide(color: CyberpunkTheme.neonCyan.withValues(alpha: 0.2))),
       ),
       child: Column(
         children: [
           _buildHeader(),
+          _buildQuickActionChips(),
           Expanded(child: _buildChatList()),
           if (_isLoading)
             Padding(
@@ -84,19 +85,66 @@ class _AiAssistantPanelState extends ConsumerState<AiAssistantPanel> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: CyberpunkTheme.neonCyan.withOpacity(0.1))),
+        border: Border(bottom: BorderSide(color: CyberpunkTheme.neonCyan.withValues(alpha: 0.1))),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Icon(Icons.auto_awesome, color: CyberpunkTheme.neonCyan),
-          const SizedBox(width: 12),
-          Text(
-            "NEURAL_LINK //",
-            style: CyberpunkTheme.neonTextStyle(bold: true, fontSize: 16),
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: CyberpunkTheme.neonCyan),
+              const SizedBox(width: 12),
+              Text(
+                "NEURAL_LINK //",
+                style: CyberpunkTheme.neonTextStyle(bold: true, fontSize: 16),
+              ),
+            ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_sweep_outlined, color: Colors.white24, size: 18),
+            onPressed: () => setState(() => _messages.removeRange(1, _messages.length)),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildQuickActionChips() {
+    return Container(
+      height: 40,
+      margin: const EdgeInsets.only(top: 8),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        children: [
+          _buildChip("SUMMARIZE", () => _runAction("SUMMARIZE")),
+          _buildChip("ACTION_ITEMS", () => _runAction("EXTRACT_ACTIONS")),
+          _buildChip("EXPLAIN_LEGAL", () => _runAction("EXPLAIN_LEGAL")),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChip(String label, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ActionChip(
+        label: Text(label, style: const TextStyle(color: CyberpunkTheme.neonCyan, fontSize: 9, fontWeight: FontWeight.bold)),
+        backgroundColor: CyberpunkTheme.neonCyan.withValues(alpha: 0.05),
+        side: const BorderSide(color: Colors.white12),
+        onPressed: onTap,
+      ),
+    );
+  }
+
+  Future<void> _runAction(String type) async {
+    String query = "";
+    if (type == "SUMMARIZE") query = "Please summarize this document concisely.";
+    if (type == "EXTRACT_ACTIONS") query = "What are the key action items and deadlines?";
+    if (type == "EXPLAIN_LEGAL") query = "Explain the legal implications and risks in this document.";
+    
+    _controller.text = query;
+    _sendMessage();
   }
 
   Widget _buildChatList() {
@@ -112,7 +160,7 @@ class _AiAssistantPanelState extends ConsumerState<AiAssistantPanel> {
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(14),
             decoration: CyberpunkTheme.glassDecoration(
-              borderColor: isAi ? Colors.white12 : CyberpunkTheme.neonCyan.withOpacity(0.3),
+              borderColor: isAi ? Colors.white12 : CyberpunkTheme.neonCyan.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(2),
             ),
             constraints: const BoxConstraints(maxWidth: 320),
@@ -144,10 +192,10 @@ class _AiAssistantPanelState extends ConsumerState<AiAssistantPanel> {
             onPressed: _sendMessage,
           ),
           filled: true,
-          fillColor: Colors.white.withOpacity(0.02),
+          fillColor: Colors.white.withValues(alpha: 0.02),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(0),
-            borderSide: BorderSide(color: CyberpunkTheme.neonCyan.withOpacity(0.3)),
+            borderSide: BorderSide(color: CyberpunkTheme.neonCyan.withValues(alpha: 0.3)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(0),

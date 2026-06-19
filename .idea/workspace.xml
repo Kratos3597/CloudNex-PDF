@@ -4,7 +4,35 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3b6dc0e0-037a-4e5e-86a1-6da39bcbd08e" name="Changes" comment="new studio" />
+    <list default="true" id="3b6dc0e0-037a-4e5e-86a1-6da39bcbd08e" name="Changes" comment="new studio">
+      <change afterPath="$PROJECT_DIR$/.artifacts/20260619-074617-654392ca-02c8-489b-9b1a-eb78cda82185/task.artifact.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/core/providers/pdf_provider.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/features/analytics/services/analytics_service.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/services/cloud_sync_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/core/theme/cyberpunk_theme.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/core/theme/cyberpunk_theme.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/ai_assistant/presentation/ai_panel.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/ai_assistant/presentation/ai_panel.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/ai_assistant/presentation/ai_shell_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/ai_assistant/presentation/ai_shell_view.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/ai_assistant/services/ai_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/ai_assistant/services/ai_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/analytics/presentation/analytics_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/analytics/presentation/analytics_view.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/dashboard/presentation/dashboard_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/dashboard/presentation/dashboard_view.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/library/presentation/library_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/library/presentation/library_view.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/controller/pdf_state_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/controller/pdf_state_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/pdf_workspace_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/pdf_workspace_view.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/signature_pad_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/signature_pad_view.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/services/pdf_modifier_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/services/pdf_modifier_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/workspace/presentation/workspace_shell.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/workspace/presentation/workspace_shell.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/pdf_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/pdf_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/linux/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/linux/flutter/generated_plugin_registrant.cc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/linux/flutter/generated_plugin_registrant.h" beforeDir="false" afterPath="$PROJECT_DIR$/linux/flutter/generated_plugin_registrant.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/linux/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/linux/flutter/generated_plugins.cmake" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/macos/Flutter/GeneratedPluginRegistrant.swift" beforeDir="false" afterPath="$PROJECT_DIR$/macos/Flutter/GeneratedPluginRegistrant.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/pdf_editor_test.dart" beforeDir="false" afterPath="$PROJECT_DIR$/test/pdf_editor_test.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.cc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.h" beforeDir="false" afterPath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/windows/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/windows/flutter/generated_plugins.cmake" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -66,26 +94,26 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
-    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;io.flutter.project.isFirstOpen&quot;: &quot;true&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Projects/CloudNex-PDF&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;AndroidSdkUpdater&quot;,
-    &quot;show.migrate.to.gradle.popup&quot;: &quot;false&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "dart.analysis.tool.window.visible": "false",
+    "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
+    "io.flutter.project.isFirstOpen": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Projects/CloudNex-PDF",
+    "settings.editor.selected.configurable": "templates.modelproviders.configurable",
+    "show.migrate.to.gradle.popup": "false"
   }
-}</component>
+}]]></component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="3b6dc0e0-037a-4e5e-86a1-6da39bcbd08e" name="Changes" comment="" />
