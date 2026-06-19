@@ -10,6 +10,8 @@ import 'signature_pad_view.dart';
 import 'package:cloudnex_pdf_reader/features/analytics/services/analytics_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:printing/printing.dart';
+import 'interactive_signature_overlay.dart';
+import '../../profile/services/signature_service.dart';
 
 class PdfWorkspaceView extends StatefulWidget {
   final PdfStateController stateController;
@@ -24,8 +26,9 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
-  PdfTextSearchResult? _searchResult;
   sf.PdfBookmarkBase? _bookmarks;
+  Uint8List? _pendingSignature;
+  bool _isPlacingSignature = false;
 
   @override
   Widget build(BuildContext context) {
@@ -47,29 +50,39 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
           final byteStream = session.currentBytes;
           if (byteStream == null) return const Center(child: Text('Data stream lost'));
 
-          return Column(
+          return Stack(
             children: [
-              _buildTabBar(),
-              if (_isSearching) _buildSearchBar(session),
-              Expanded(
-                child: SfPdfViewer.memory(
-                  byteStream,
-                  key: ValueKey("${session.id}_${byteStream.hashCode}"),
-                  controller: session.pdfViewerController,
-                  initialPageNumber: session.activePageNumber,
-                  interactionMode: widget.stateController.currentTool == ActivePdfTool.none 
-                      ? PdfInteractionMode.pan : PdfInteractionMode.selection,
-                  onTap: _handleCanvasTapIntercept,
-                  onPageChanged: (details) => widget.stateController.updatePageNumber(details.newPageNumber),
-                  onTextSelectionChanged: _handleTextSelection,
-                  onDocumentLoaded: (details) {
-                    setState(() {
-                      _bookmarks = details.document.bookmarks;
-                    });
-                  },
-                ),
+              Column(
+                children: [
+                  _buildTabBar(),
+                  if (_isSearching) _buildSearchBar(session),
+                  Expanded(
+                    child: SfPdfViewer.memory(
+                      byteStream,
+                      key: ValueKey("${session.id}_${byteStream.hashCode}"),
+                      controller: session.pdfViewerController,
+                      initialPageNumber: session.activePageNumber,
+                      interactionMode: widget.stateController.currentTool == ActivePdfTool.none 
+                          ? PdfInteractionMode.pan : PdfInteractionMode.selection,
+                      onTap: _handleCanvasTapIntercept,
+                      onPageChanged: (details) => widget.stateController.updatePageNumber(details.newPageNumber),
+                      onTextSelectionChanged: _handleTextSelection,
+                      onDocumentLoaded: (details) {
+                        setState(() {
+                          _bookmarks = details.document.bookmarks;
+                        });
+                      },
+                    ),
+                  ),
+                  _buildToolDock(),
+                ],
               ),
-              _buildToolDock(),
+              if (_isPlacingSignature && _pendingSignature != null)
+                InteractiveSignatureOverlay(
+                  imageBytes: _pendingSignature!,
+                  onCancel: () => setState(() => _isPlacingSignature = false),
+                  onConfirm: (pos, size) => _burnSignatureToPdf(pos, size),
+                ),
             ],
           );
         },
@@ -156,7 +169,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
           filled: true,
           fillColor: PdfProTheme.backgroundLight,
         ),
-        onSubmitted: (val) => _searchResult = session.pdfViewerController.searchText(val),
+        onSubmitted: (val) => session.pdfViewerController.searchText(val),
       ),
     );
   }
@@ -175,8 +188,8 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
             onPressed: _showAnnotationOptions,
             isActive: widget.stateController.currentTool == ActivePdfTool.highlight),
           _DockButton(icon: Icons.gesture_rounded, label: "Sign", 
-            onPressed: _openSignaturePad,
-            isActive: widget.stateController.currentTool == ActivePdfTool.signaturePlacement),
+            onPressed: _openSignatureVault,
+            isActive: _isPlacingSignature),
           _DockButton(icon: Icons.edit_document, label: "Edit", onPressed: _showEditOptions),
           _DockButton(icon: Icons.text_fields_rounded, label: "Forms", onPressed: _handleFormFilling),
           _DockButton(icon: Icons.save_alt_rounded, label: "Export", onPressed: _showExportOptions),
@@ -298,28 +311,42 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     }
   }
 
-  Future<void> _openSignaturePad() async {
-    final Uint8List? signature = await showDialog<Uint8List>(context: context, builder: (context) => const SignaturePadView());
-    if (signature != null) widget.stateController.setupSignaturePlacement(signature);
+  Future<void> _openSignatureVault() async {
+    final bytes = await SignatureService().getSignatureBytes();
+    if (bytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No signature saved. Please add one in Profile.")));
+      return;
+    }
+    setState(() {
+      _pendingSignature = bytes;
+      _isPlacingSignature = true;
+    });
+  }
+
+  Future<void> _burnSignatureToPdf(Offset screenPos, Size size) async {
+    final pageIndex = widget.stateController.activePageNumber - 1;
+    final currentBytes = widget.stateController.currentBytes!;
+    
+    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+    
+    final updatedBytes = await PdfModifierService.injectGraphicSignatureAsync(
+      originalBytes: currentBytes,
+      targetPageZeroIndexed: pageIndex,
+      signatureImageBytes: _pendingSignature!,
+      coordinateX: screenPos.dx,
+      coordinateY: screenPos.dy,
+      password: widget.stateController.activeDocumentPassword,
+    );
+
+    if (!mounted) return;
+    Navigator.pop(context);
+    
+    widget.stateController.commitMutation(updatedBytes);
+    setState(() => _isPlacingSignature = false);
   }
 
   void _handleCanvasTapIntercept(PdfGestureDetails details) async {
-    if (widget.stateController.currentTool == ActivePdfTool.signaturePlacement) {
-      final currentRawBytes = widget.stateController.currentBytes!;
-      final graphicBytes = widget.stateController.activeSignatureGraphicBytes!;
-      showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
-      final updatedBytes = await PdfModifierService.injectGraphicSignatureAsync(
-        originalBytes: currentRawBytes,
-        targetPageZeroIndexed: details.pageNumber - 1,
-        signatureImageBytes: graphicBytes,
-        coordinateX: details.pagePosition.dx,
-        coordinateY: details.pagePosition.dy,
-      );
-      if (!mounted) return;
-      Navigator.pop(context);
-      widget.stateController.commitMutation(updatedBytes);
-      widget.stateController.clearActiveTool();
-    }
+    // Signature logic handled via Burn button
   }
 
   Future<void> _handleRotation() async {
@@ -407,7 +434,6 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No interactive fields detected")));
       return;
     }
-    // Form logic is available via PdfService
   }
 
   Future<void> _executeSystemSave() async {

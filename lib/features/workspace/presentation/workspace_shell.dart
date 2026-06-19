@@ -5,6 +5,7 @@ import '../../library/presentation/library_view.dart';
 import '../../analytics/presentation/analytics_view.dart';
 import '../../../core/theme/pdf_pro_theme.dart';
 import 'package:cloudnex_pdf_reader/services/cloud_sync_service.dart';
+import '../../profile/presentation/signature_vault_view.dart';
 
 class WorkspaceShell extends StatefulWidget {
   const WorkspaceShell({super.key});
@@ -26,6 +27,7 @@ class _WorkspaceShellState extends State<WorkspaceShell> {
     const DashboardView(),
     const LibraryView(),
     const AnalyticsView(),
+    const SignatureVaultView(),
   ];
 
   @override
@@ -52,6 +54,11 @@ class _WorkspaceShellState extends State<WorkspaceShell> {
             icon: Icon(Icons.insights_outlined),
             selectedIcon: Icon(Icons.insights, color: PdfProTheme.primaryBlue),
             label: 'Activity',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded, color: PdfProTheme.primaryBlue),
+            label: 'Profile',
           ),
         ],
       ),

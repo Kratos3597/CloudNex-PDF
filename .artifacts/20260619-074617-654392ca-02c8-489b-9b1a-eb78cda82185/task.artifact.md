@@ -1,14 +1,15 @@
-# Task Management - Debug APK & UI Polish
+# Task Management - PDF Pro Interactive Layer
 
-- [/] UI/UX Scaling & Responsiveness
-    - [ ] Implement Full-Screen Scaling (Edge-to-Edge)
-    - [ ] Add Tablet Landscape Mode support
-    - [ ] Refine 'Apple-style' Dynamic Glass UI
-- [ ] Bug Fixes & Feature Enhancements
-    - [ ] Fix OCR PlatformException (InputImageConverterError)
-    - [ ] Implement Folder Selection for Excel/Word exports
-    - [ ] Reorganize Bottom Navigation Menu
-- [ ] Build & Deployment
-    - [ ] Final Analyze & Build Check
-    - [ ] Compile Debug APK
-    - [ ] Push to GitHub
+- [/] Signature Management & Vault
+    - [ ] Create `SignatureVaultView` to upload and store signatures
+    - [ ] Implement Background Removal heuristic for signatures
+- [/] Interactive Workspace Overhaul
+    - [ ] Enable Native Syncfusion Form Filling
+    - [ ] Implement `DraggableSignatureOverlay` for move/resize
+    - [ ] Implement "Burn" logic to commit overlay to PDF bytes
+    - [ ] Enable Freehand Ink Tool and Shapes
+- [ ] Advanced Page Manipulation
+    - [ ] Add `PageManagerView` for reordering and bulk deletion
+- [ ] Branding & Polish
+    - [ ] Ensure "CloudNex PDF Pro" branding throughout
+    - [ ] Final UI/UX refinement for productivity

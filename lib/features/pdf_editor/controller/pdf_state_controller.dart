@@ -1,18 +1,20 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart' as sf;
 import '../services/pdf_cache_service.dart';
 import '../services/pdf_modifier_service.dart';
 import 'package:cloudnex_pdf_reader/features/analytics/services/analytics_service.dart';
 import 'package:cloudnex_pdf_reader/services/storage/isar_service.dart';
 
-enum ActivePdfTool { none, draw, highlight, underline, strikeout, signaturePlacement, imagePlacement }
+enum ActivePdfTool { none, highlight, underline, strikeout, ink, rectangle, circle, signaturePlacement }
 
 class PdfSession {
   final String id;
   final String fileName;
   final String? filePath;
   Uint8List? currentBytes;
+  sf.PdfDocument? liveDocument; 
   final List<Uint8List> undoStack = [];
   final List<Uint8List> redoStack = [];
   final PdfViewerController pdfViewerController = PdfViewerController();
@@ -26,10 +28,22 @@ class PdfSession {
     this.filePath,
     this.currentBytes,
     this.password,
-  });
+  }) {
+    if (currentBytes != null) {
+      liveDocument = sf.PdfDocument(inputBytes: currentBytes, password: password);
+    }
+  }
 
   void dispose() {
     pdfViewerController.dispose();
+    liveDocument?.dispose();
+  }
+
+  void refreshBytes() {
+    if (liveDocument != null) {
+      final List<int> saved = liveDocument!.saveSync();
+      currentBytes = Uint8List.fromList(saved);
+    }
   }
 }
 
@@ -119,7 +133,8 @@ class PdfStateController extends ChangeNotifier {
 
   void setupImagePlacement(Uint8List imageBytes) {
     _activeSignatureGraphicBytes = imageBytes;
-    _currentTool = ActivePdfTool.imagePlacement;
+    // For now, mapping image placement to signature placement for the overlay
+    _currentTool = ActivePdfTool.signaturePlacement;
     notifyListeners();
   }
 
@@ -159,6 +174,10 @@ class PdfStateController extends ChangeNotifier {
       session.undoStack.add(session.currentBytes!);
     }
     session.currentBytes = mutatedBytes;
+    
+    session.liveDocument?.dispose();
+    session.liveDocument = sf.PdfDocument(inputBytes: mutatedBytes, password: session.password);
+
     session.redoStack.clear();
     _updateSecurityReport(session);
     _triggerBackgroundCacheSync(session);

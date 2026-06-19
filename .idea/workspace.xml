@@ -5,28 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3b6dc0e0-037a-4e5e-86a1-6da39bcbd08e" name="Changes" comment="new studio">
-      <change afterPath="$PROJECT_DIR$/lib/core/providers/theme_provider.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/interactive_signature_overlay.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/features/profile/presentation/signature_vault_view.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/features/profile/services/signature_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.artifacts/20260619-074617-654392ca-02c8-489b-9b1a-eb78cda82185/task.artifact.md" beforeDir="false" afterPath="$PROJECT_DIR$/.artifacts/20260619-074617-654392ca-02c8-489b-9b1a-eb78cda82185/task.artifact.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/core/theme/pdf_pro_theme.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/core/theme/pdf_pro_theme.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/features/ai_assistant/presentation/ai_panel.dart" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/features/ai_assistant/presentation/ai_shell_view.dart" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/features/ai_assistant/services/ai_service.dart" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/features/dashboard/presentation/dashboard_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/dashboard/presentation/dashboard_view.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/features/library/presentation/library_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/library/presentation/library_view.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/controller/pdf_state_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/controller/pdf_state_controller.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/pdf_workspace_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/pdf_workspace_view.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/signature_pad_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/signature_pad_view.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/features/workspace/presentation/workspace_shell.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/workspace/presentation/workspace_shell.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/main.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/services/pdf_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/pdf_service.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/services/storage/isar_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/storage/isar_service.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linux/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/linux/flutter/generated_plugin_registrant.cc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linux/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/linux/flutter/generated_plugins.cmake" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/macos/Flutter/GeneratedPluginRegistrant.swift" beforeDir="false" afterPath="$PROJECT_DIR$/macos/Flutter/GeneratedPluginRegistrant.swift" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.cc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/windows/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/windows/flutter/generated_plugins.cmake" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
