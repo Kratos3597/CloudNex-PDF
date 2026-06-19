@@ -60,6 +60,31 @@ class PdfProTheme {
     );
   }
 
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      scaffoldBackgroundColor: const Color(0xFF1A1B1E),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primaryBlue,
+        brightness: Brightness.dark,
+        primary: primaryBlue,
+        secondary: accentIndigo,
+        surface: const Color(0xFF2C2E33),
+      ),
+      textTheme: GoogleFonts.interTextTheme().copyWith(
+        displayLarge: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
+        titleLarge: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600),
+        bodyLarge: GoogleFonts.inter(color: Colors.white70),
+        bodyMedium: GoogleFonts.inter(color: Colors.white54),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF1A1B1E),
+        elevation: 0,
+        titleTextStyle: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
   // Professional Glass Decoration
   static BoxDecoration proGlassDecoration({BorderRadius? borderRadius}) {
     return BoxDecoration(

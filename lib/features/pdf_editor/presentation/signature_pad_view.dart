@@ -1,7 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../core/theme/cyberpunk_theme.dart';
+import '../../../core/theme/pdf_pro_theme.dart';
 
 class SignaturePadView extends StatefulWidget {
   const SignaturePadView({super.key});
@@ -21,7 +21,7 @@ class _SignaturePadViewState extends State<SignaturePadView> {
     final canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, 400, 200));
 
     final paint = Paint()
-      ..color = Colors.black // Clean dark ink for legal contrast
+      ..color = Colors.black 
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 4.0;
 
@@ -44,104 +44,89 @@ class _SignaturePadViewState extends State<SignaturePadView> {
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24.0),
-        child: BackdropFilter(
-          filter: CyberpunkTheme.glassBlurFilter,
-          child: Container(
-            width: double.infinity,
-            decoration: CyberpunkTheme.glassDecoration(
-              borderColor: CyberpunkTheme.neonCyan.withValues(alpha: 0.4),
-            ),
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
+      child: Container(
+        width: double.infinity,
+        height: 350,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            Row(
               children: [
-                const Row(
-                  children: [
-                    Icon(Icons.gesture,
-                        color: CyberpunkTheme.neonCyan, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      'BIOMETRIC DRAW CORE',
-                      style: TextStyle(
-                          color: CyberpunkTheme.textPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          letterSpacing: 1.5),
-                    ),
-                  ],
+                const Icon(Icons.gesture_rounded, color: PdfProTheme.primaryBlue, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Draw Signature',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 16),
+              ],
+            ),
+            const SizedBox(height: 16),
 
-                // Active drawing zone
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: GestureDetector(
-                        onPanUpdate: (details) {
-                          setState(() {
-                            _points.add(details.localPosition);
-                          });
-                        },
-                        onPanEnd: (_) => setState(() => _points.add(null)),
-                        child: CustomPaint(
-                          size: Size.infinite,
-                          painter: VectorLinePainter(_points),
-                        ),
-                      ),
+            // Active drawing zone
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: PdfProTheme.backgroundLight,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: GestureDetector(
+                    onPanUpdate: (details) {
+                      setState(() {
+                        _points.add(details.localPosition);
+                      });
+                    },
+                    onPanEnd: (_) => setState(() => _points.add(null)),
+                    child: CustomPaint(
+                      size: Size.infinite,
+                      painter: VectorLinePainter(_points),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+              ),
+            ),
+            const SizedBox(height: 16),
 
-                // Operation Row
+            // Operation Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: () => setState(() => _points.clear()),
+                  child: const Text('Clear', style: TextStyle(color: PdfProTheme.errorRed)),
+                ),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     TextButton(
-                      onPressed: () => setState(() => _points.clear()),
-                      child: const Text('PURGE',
-                          style: TextStyle(color: CyberpunkTheme.neonPink)),
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel', style: TextStyle(color: PdfProTheme.textLight)),
                     ),
-                    Row(
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('CANCEL',
-                              style: TextStyle(
-                                  color: CyberpunkTheme.textSecondary)),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                CyberpunkTheme.neonCyan.withValues(alpha: 0.2),
-                            side: const BorderSide(
-                                color: CyberpunkTheme.neonCyan),
-                          ),
-                          onPressed: () async {
-                            final bytes = await _exportCanvasToPngBytes();
-                            if (context.mounted) {
-                              Navigator.of(context).pop(bytes);
-                            }
-                          },
-                          child: const Text('INJECT',
-                              style: TextStyle(
-                                  color: CyberpunkTheme.textPrimary,
-                                  fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    )
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: PdfProTheme.primaryBlue,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                      ),
+                      onPressed: () async {
+                        final bytes = await _exportCanvasToPngBytes();
+                        if (context.mounted) {
+                          Navigator.of(context).pop(bytes);
+                        }
+                      },
+                      child: const Text('Apply Signature', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
                   ],
                 )
               ],
-            ),
-          ),
+            )
+          ],
         ),
       ),
     );
@@ -157,7 +142,7 @@ class VectorLinePainter extends CustomPainter {
     final paint = Paint()
       ..color = Colors.black
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = 4.0;
+      ..strokeWidth = 3.0;
 
     for (int i = 0; i < points.length - 1; i++) {
       if (points[i] != null && points[i + 1] != null) {

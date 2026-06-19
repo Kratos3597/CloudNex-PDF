@@ -81,7 +81,13 @@ class _LibraryViewState extends ConsumerState<LibraryView> {
                     final file = File(doc.filePath);
                     if (await file.exists()) {
                       final bytes = await file.readAsBytes();
-                      pdfState.openDocument(bytes, doc.fileName);
+                      pdfState.openDocument(
+                        bytes, 
+                        doc.fileName, 
+                        filePath: doc.filePath,
+                        initialPage: doc.lastOpenedPage,
+                      );
+
                       if (!context.mounted) return;
                       Navigator.push(
                         context,

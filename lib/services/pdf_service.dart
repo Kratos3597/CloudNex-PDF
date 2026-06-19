@@ -25,14 +25,12 @@ class PdfService {
 
     for (int i = 1; i <= document.pagesCount; i++) {
       final page = await document.getPage(i);
-      // Higher scale for better OCR accuracy
       final pageImage = await page.render(
         width: page.width * 2, 
         height: page.height * 2,
       );
       
       if (pageImage != null) {
-        // Save to temp file to avoid PlatformException(InputImageConverterError)
         final tempFile = File('${tempDir.path}/ocr_page_$i.jpg');
         await tempFile.writeAsBytes(pageImage.bytes);
         
@@ -40,7 +38,6 @@ class PdfService {
         final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
         fullText += recognizedText.text + "\n";
         
-        // Clean up
         if (await tempFile.exists()) await tempFile.delete();
       }
       await page.close();
@@ -58,7 +55,6 @@ class PdfService {
     
     String csv = "";
     for (var line in lines) {
-      // Very primitive heuristic: split by multiple spaces
       final parts = line.text.split(RegExp(r'\s{2,}'));
       csv += parts.map((e) => '"${e.replaceAll('"', '""')}"').join(',') + "\n";
     }
@@ -95,7 +91,7 @@ class PdfService {
     try {
       String savePath = originalPath;
       
-      if (!isOverwrite) {
+      if (!isOverwrite || originalPath.contains('MERGED_')) {
         final directory = await getApplicationDocumentsDirectory();
         final fileName = originalPath.split('/').last;
         savePath = "${directory.path}/EDITED_${DateTime.now().millisecondsSinceEpoch}_$fileName";
@@ -107,6 +103,117 @@ class PdfService {
     } catch (e) {
       throw Exception("Failed to save document: $e");
     }
+  }
+
+  /// Merges two PDFs
+  static Future<Uint8List> mergeDocuments(List<Uint8List> documents) async {
+    final sf.PdfDocument finalDoc = sf.PdfDocument();
+    for (var docBytes in documents) {
+      final sf.PdfDocument inputDoc = sf.PdfDocument(inputBytes: docBytes);
+      for (int i = 0; i < inputDoc.pages.count; i++) {
+        final sf.PdfPage page = finalDoc.pages.add();
+        final sf.PdfTemplate template = inputDoc.pages[i].createTemplate();
+        page.graphics.drawPdfTemplate(template, const Offset(0, 0));
+      }
+      inputDoc.dispose();
+    }
+    final List<int> bytes = await finalDoc.save();
+    finalDoc.dispose();
+    return Uint8List.fromList(bytes);
+  }
+
+  /// Splits a PDF into individual pages
+  static Future<List<Uint8List>> splitDocument(Uint8List bytes) async {
+    final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
+    final List<Uint8List> pages = [];
+    
+    for (int i = 0; i < document.pages.count; i++) {
+      final sf.PdfDocument newDoc = sf.PdfDocument();
+      final sf.PdfPage page = newDoc.pages.add();
+      final sf.PdfTemplate template = document.pages[i].createTemplate();
+      page.graphics.drawPdfTemplate(template, const Offset(0, 0));
+      
+      final List<int> savedBytes = await newDoc.save();
+      pages.add(Uint8List.fromList(savedBytes));
+      newDoc.dispose();
+    }
+    
+    document.dispose();
+    return pages;
+  }
+
+  /// Deletes pages from a PDF
+  static Future<Uint8List> deletePages(Uint8List bytes, List<int> pageIndices) async {
+    final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
+    pageIndices.sort((a, b) => b.compareTo(a));
+    
+    for (var index in pageIndices) {
+      document.pages.removeAt(index);
+    }
+    
+    final List<int> savedBytes = await document.save();
+    document.dispose();
+    return Uint8List.fromList(savedBytes);
+  }
+
+  /// Rotates a page
+  static Future<Uint8List> rotatePage(Uint8List bytes, int pageIndex, sf.PdfPageRotateAngle angle) async {
+    final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
+    document.pages[pageIndex].rotation = angle;
+    
+    final List<int> savedBytes = await document.save();
+    document.dispose();
+    return Uint8List.fromList(savedBytes);
+  }
+
+  /// Adds password protection
+  static Future<Uint8List> applySecurity(Uint8List bytes, String openPassword, {String? ownerPassword}) async {
+    final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
+    final sf.PdfSecurity security = document.security;
+    
+    security.userPassword = openPassword;
+    security.ownerPassword = ownerPassword ?? openPassword;
+    
+    security.permissions.addAll([
+      sf.PdfPermissionsFlags.print,
+      sf.PdfPermissionsFlags.copyContent,
+    ]);
+    
+    final List<int> savedBytes = await document.save();
+    document.dispose();
+    return Uint8List.fromList(savedBytes);
+  }
+
+  /// Adds a text annotation (Highlight, Underline, etc.)
+  static Future<Uint8List> addTextAnnotation({
+    required Uint8List bytes,
+    required int pageIndex,
+    required List<Rect> bounds,
+    required sf.PdfTextMarkupAnnotationType type,
+    sf.PdfColor? color,
+    String? author,
+    String? subject,
+    String? text,
+  }) async {
+    final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
+    final sf.PdfPage page = document.pages[pageIndex];
+
+    final sf.PdfTextMarkupAnnotation markup = sf.PdfTextMarkupAnnotation(
+      bounds.reduce((a, b) => a.expandToInclude(b)),
+      text ?? '',
+      sf.PdfColor(255, 255, 0),
+    );
+    
+    markup.color = color ?? sf.PdfColor(255, 255, 0); 
+    markup.textMarkupAnnotationType = type;
+    markup.author = author ?? 'CloudNex User';
+    markup.subject = subject ?? 'Annotation';
+    
+    page.annotations.add(markup);
+
+    final List<int> savedBytes = await document.save();
+    document.dispose();
+    return Uint8List.fromList(savedBytes);
   }
 
   /// Retrieves all form field names and their current values
@@ -159,7 +266,7 @@ class PdfService {
     return Uint8List.fromList(savedBytes);
   }
 
-  /// Generates a new PDF report with AI summaries or metadata
+  /// Generates a new PDF report
   static Future<Uint8List> generateReport({
     required String title,
     required String content,
@@ -169,15 +276,12 @@ class PdfService {
     final sf.PdfPage page = document.pages.add();
     final sf.PdfGraphics graphics = page.graphics;
     
-    // Draw Title
     final sf.PdfFont titleFont = sf.PdfStandardFont(sf.PdfFontFamily.helvetica, 18, style: sf.PdfFontStyle.bold);
     graphics.drawString(title, titleFont, bounds: const Rect.fromLTWH(0, 0, 500, 30));
     
-    // Draw timestamp
     final sf.PdfFont metaFont = sf.PdfStandardFont(sf.PdfFontFamily.helvetica, 10, style: sf.PdfFontStyle.italic);
     graphics.drawString("Generated by CloudNex // ${DateTime.now()}", metaFont, bounds: const Rect.fromLTWH(0, 35, 500, 20));
     
-    // Draw content
     final sf.PdfFont bodyFont = sf.PdfStandardFont(sf.PdfFontFamily.helvetica, 12);
     final sf.PdfTextElement element = sf.PdfTextElement(text: content, font: bodyFont);
     final sf.PdfLayoutResult result = element.draw(
@@ -185,7 +289,6 @@ class PdfService {
       bounds: Rect.fromLTWH(0, 70, page.getClientSize().width, page.getClientSize().height - 100),
     )!;
     
-    // Draw Table if provided
     if (tableData != null && tableData.isNotEmpty) {
       final sf.PdfGrid grid = sf.PdfGrid();
       grid.columns.add(count: 2);
@@ -208,49 +311,48 @@ class PdfService {
     return Uint8List.fromList(savedBytes);
   }
 
-  /// Merges two PDFs
-  static Future<Uint8List> mergeDocuments(List<Uint8List> documents) async {
-    final sf.PdfDocument finalDoc = sf.PdfDocument();
-    for (var docBytes in documents) {
-      final sf.PdfDocument inputDoc = sf.PdfDocument(inputBytes: docBytes);
-      for (int i = 0; i < inputDoc.pages.count; i++) {
-        final sf.PdfPage page = finalDoc.pages.add();
-        final sf.PdfTemplate template = inputDoc.pages[i].createTemplate();
-        page.graphics.drawPdfTemplate(template, const Offset(0, 0));
-      }
-      inputDoc.dispose();
-    }
-    final List<int> bytes = await finalDoc.save();
-    finalDoc.dispose();
-    return Uint8List.fromList(bytes);
-  }
-
-  /// Adds a text annotation (Highlight, Underline, etc.)
-  static Future<Uint8List> addTextAnnotation({
+  /// Adds a shape annotation
+  static Future<Uint8List> addShapeAnnotation({
     required Uint8List bytes,
     required int pageIndex,
-    required List<Rect> bounds,
-    required sf.PdfTextMarkupAnnotationType type,
+    required Rect bounds,
+    required String shapeType, 
     sf.PdfColor? color,
-    String? author,
-    String? subject,
-    String? text,
   }) async {
     final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
     final sf.PdfPage page = document.pages[pageIndex];
+    
+    final sf.PdfColor strokeColor = color ?? sf.PdfColor(255, 0, 0);
+    
+    if (shapeType == 'RECTANGLE') {
+      page.annotations.add(sf.PdfRectangleAnnotation(bounds, 'Rectangle', innerColor: sf.PdfColor(255, 255, 255, 0), color: strokeColor));
+    } else if (shapeType == 'CIRCLE') {
+      page.annotations.add(sf.PdfEllipseAnnotation(bounds, 'Circle', innerColor: sf.PdfColor(255, 255, 255, 0), color: strokeColor));
+    }
+    
+    final List<int> savedBytes = await document.save();
+    document.dispose();
+    return Uint8List.fromList(savedBytes);
+  }
 
-    final sf.PdfTextMarkupAnnotation markup = sf.PdfTextMarkupAnnotation(
-      bounds.reduce((a, b) => a.expandToInclude(b)),
-      text ?? '',
-      sf.PdfColor(255, 255, 0),
+  /// Adds a sticky note (Popup) annotation
+  static Future<Uint8List> addStickyNote({
+    required Uint8List bytes,
+    required int pageIndex,
+    required Offset position,
+    required String text,
+  }) async {
+    final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
+    final sf.PdfPage page = document.pages[pageIndex];
+    
+    final sf.PdfPopupAnnotation popup = sf.PdfPopupAnnotation(
+      Rect.fromLTWH(position.dx, position.dy, 20, 20),
+      text,
     );
+    popup.icon = sf.PdfPopupIcon.comment;
+    popup.color = sf.PdfColor(255, 255, 0);
     
-    markup.color = color ?? sf.PdfColor(255, 255, 0); // Yellow default
-    markup.textMarkupAnnotationType = type;
-    markup.author = author ?? 'CloudNex User';
-    markup.subject = subject ?? 'Annotation';
-    
-    page.annotations.add(markup);
+    page.annotations.add(popup);
 
     final List<int> savedBytes = await document.save();
     document.dispose();

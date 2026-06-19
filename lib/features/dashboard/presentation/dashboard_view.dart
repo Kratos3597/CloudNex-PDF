@@ -7,7 +7,10 @@ import '../../../core/providers/storage_providers.dart';
 import '../../library/domain/models/document_record.dart';
 import '../../pdf_editor/presentation/pdf_workspace_view.dart';
 import '../../../core/providers/pdf_provider.dart';
+import '../../../core/providers/theme_provider.dart';
+import '../../../services/pdf_service.dart';
 import 'dart:io';
+import 'dart:typed_data';
 
 class DashboardView extends ConsumerWidget {
   const DashboardView({super.key});
@@ -16,14 +19,18 @@ class DashboardView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final documentsAsync = ref.watch(documentListProvider);
     final pdfState = ref.watch(pdfStateProvider);
+    final themeMode = ref.watch(themeProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PDF Pro'),
+        title: const Text('CloudNex PDF Pro'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: PdfProTheme.textLight),
-            onPressed: () {},
+            icon: Icon(themeMode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded, color: PdfProTheme.textLight),
+            onPressed: () {
+              ref.read(themeProvider.notifier).state = 
+                themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+            },
           ),
           const SizedBox(width: 8),
         ],
@@ -40,7 +47,7 @@ class DashboardView extends ConsumerWidget {
                     "Welcome back",
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: PdfProTheme.textDark,
+                          color: themeMode == ThemeMode.dark ? Colors.white : PdfProTheme.textDark,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -56,7 +63,7 @@ class DashboardView extends ConsumerWidget {
                     children: [
                       Text(
                         "Recent Documents",
-                        style: PdfProTheme.lightTheme.textTheme.titleLarge,
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
                       TextButton(
                         onPressed: () {},
@@ -118,20 +125,59 @@ class DashboardView extends ConsumerWidget {
         ),
         const SizedBox(width: 16),
         _QuickAction(
-          icon: Icons.create_new_folder_rounded,
-          label: "New Folder",
+          icon: Icons.merge_type_rounded,
+          label: "Merge",
           color: PdfProTheme.accentIndigo,
-          onTap: () {},
+          onTap: () => _handleMerge(context, ref),
         ),
         const SizedBox(width: 16),
         _QuickAction(
           icon: Icons.auto_graph_rounded,
-          label: "Analytics",
+          label: "Activity",
           color: PdfProTheme.successGreen,
           onTap: () {},
         ),
       ],
     );
+  }
+
+  Future<void> _handleMerge(BuildContext context, WidgetRef ref) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+      allowMultiple: true,
+    );
+
+    if (result != null && result.files.length >= 2) {
+      showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+      
+      final List<Uint8List> docs = [];
+      for (var file in result.files) {
+        if (file.path != null) {
+          docs.add(await File(file.path!).readAsBytes());
+        }
+      }
+
+      final mergedBytes = await PdfService.mergeDocuments(docs);
+      
+      if (!context.mounted) return;
+      Navigator.pop(context);
+
+      final record = DocumentRecord()
+        ..filePath = "MERGED_${DateTime.now().millisecondsSinceEpoch}.pdf"
+        ..fileName = "Merged Document.pdf"
+        ..lastOpenedDate = DateTime.now();
+      
+      final savePath = await PdfService.saveDocument(mergedBytes, record.fileName);
+      record.filePath = savePath;
+
+      await ref.read(isarServiceProvider).saveDocument(record);
+      ref.invalidate(documentListProvider);
+      
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Documents merged successfully")));
+    } else if (result != null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Select at least 2 documents to merge")));
+    }
   }
 
   Future<void> _handleImport(WidgetRef ref) async {
@@ -211,7 +257,12 @@ class _DocumentCard extends StatelessWidget {
           final file = File(doc.filePath);
           if (await file.exists()) {
             final bytes = await file.readAsBytes();
-            pdfState.openDocument(bytes, doc.fileName);
+            pdfState.openDocument(
+              bytes, 
+              doc.fileName, 
+              filePath: doc.filePath,
+              initialPage: doc.lastOpenedPage,
+            );
             if (!context.mounted) return;
             Navigator.push(
               context,
@@ -232,7 +283,7 @@ class _DocumentCard extends StatelessWidget {
         ),
         title: Text(
           doc.fileName,
-          style: const TextStyle(fontWeight: FontWeight.w600, color: PdfProTheme.textDark),
+          style: const TextStyle(fontWeight: FontWeight.w600),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),

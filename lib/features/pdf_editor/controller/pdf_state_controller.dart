@@ -4,12 +4,14 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../services/pdf_cache_service.dart';
 import '../services/pdf_modifier_service.dart';
 import 'package:cloudnex_pdf_reader/features/analytics/services/analytics_service.dart';
+import 'package:cloudnex_pdf_reader/services/storage/isar_service.dart';
 
 enum ActivePdfTool { none, draw, highlight, underline, strikeout, signaturePlacement, imagePlacement }
 
 class PdfSession {
   final String id;
   final String fileName;
+  final String? filePath;
   Uint8List? currentBytes;
   final List<Uint8List> undoStack = [];
   final List<Uint8List> redoStack = [];
@@ -21,6 +23,7 @@ class PdfSession {
   PdfSession({
     required this.id,
     required this.fileName,
+    this.filePath,
     this.currentBytes,
     this.password,
   });
@@ -56,13 +59,15 @@ class PdfStateController extends ChangeNotifier {
   String? get activeDocumentPassword => activeSession?.password;
   PdfSecurityReport? get securityReport => activeSession?.securityReport;
 
-  void openDocument(Uint8List bytes, String fileName, {String? password}) {
+  void openDocument(Uint8List bytes, String fileName, {String? filePath, String? password, int initialPage = 1}) {
     final session = PdfSession(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       fileName: fileName,
+      filePath: filePath,
       currentBytes: bytes,
       password: password,
     );
+    session.activePageNumber = initialPage;
     
     _sessions.add(session);
     _activeSessionIndex = _sessions.length - 1;
@@ -137,6 +142,11 @@ class PdfStateController extends ChangeNotifier {
     final session = activeSession;
     if (session == null || session.activePageNumber == pageNum) return;
     session.activePageNumber = pageNum;
+    
+    if (session.filePath != null) {
+      IsarService().updateLastOpenedPage(session.filePath!, pageNum);
+    }
+
     _triggerBackgroundCacheSync(session);
     notifyListeners();
   }
