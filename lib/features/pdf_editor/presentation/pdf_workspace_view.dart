@@ -11,6 +11,8 @@ import 'package:cloudnex_pdf_reader/features/analytics/services/analytics_servic
 import 'package:file_picker/file_picker.dart';
 import 'package:printing/printing.dart';
 import 'interactive_signature_overlay.dart';
+import 'interactive_shape_overlay.dart';
+import 'page_manager_view.dart';
 import '../../profile/services/signature_service.dart';
 
 class PdfWorkspaceView extends StatefulWidget {
@@ -29,6 +31,8 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
   sf.PdfBookmarkBase? _bookmarks;
   Uint8List? _pendingSignature;
   bool _isPlacingSignature = false;
+  ShapeType? _activeShapeType;
+  bool _isPlacingShape = false;
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +86,12 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
                   imageBytes: _pendingSignature!,
                   onCancel: () => setState(() => _isPlacingSignature = false),
                   onConfirm: (pos, size) => _burnSignatureToPdf(pos, size),
+                ),
+              if (_isPlacingShape && _activeShapeType != null)
+                InteractiveShapeOverlay(
+                  type: _activeShapeType!,
+                  onCancel: () => setState(() => _isPlacingShape = false),
+                  onConfirm: (pos, size) => _burnShapeToPdf(pos, size),
                 ),
             ],
           );
@@ -241,6 +251,10 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
             ListTile(leading: const Icon(Icons.highlight_rounded, color: Colors.amber), title: const Text('Highlight'), onTap: () { Navigator.pop(context); _applyAnnotation(sf.PdfTextMarkupAnnotationType.highlight); }),
             ListTile(leading: const Icon(Icons.format_underlined_rounded), title: const Text('Underline'), onTap: () { Navigator.pop(context); _applyAnnotation(sf.PdfTextMarkupAnnotationType.underline); }),
             ListTile(leading: const Icon(Icons.strikethrough_s_rounded), title: const Text('Strikeout'), onTap: () { Navigator.pop(context); _applyAnnotation(sf.PdfTextMarkupAnnotationType.strikethrough); }),
+            const Divider(),
+            ListTile(leading: const Icon(Icons.rectangle_outlined), title: const Text('Rectangle'), onTap: () { Navigator.pop(context); setState(() { _activeShapeType = ShapeType.rectangle; _isPlacingShape = true; }); }),
+            ListTile(leading: const Icon(Icons.circle_outlined), title: const Text('Circle'), onTap: () { Navigator.pop(context); setState(() { _activeShapeType = ShapeType.circle; _isPlacingShape = true; }); }),
+            ListTile(leading: const Icon(Icons.horizontal_rule_rounded), title: const Text('Line'), onTap: () { Navigator.pop(context); setState(() { _activeShapeType = ShapeType.line; _isPlacingShape = true; }); }),
           ],
         ),
       ),
@@ -254,13 +268,20 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(leading: const Icon(Icons.layers_rounded), title: const Text('Page Manager (Reorder/Delete)'), onTap: () { Navigator.pop(context); _openPageManager(); }),
             ListTile(leading: const Icon(Icons.rotate_right_rounded), title: const Text('Rotate Page'), onTap: () { Navigator.pop(context); _handleRotation(); }),
-            ListTile(leading: const Icon(Icons.delete_sweep_rounded, color: Colors.red), title: const Text('Delete Current Page'), onTap: () { Navigator.pop(context); _handlePageDeletion(); }),
             ListTile(leading: const Icon(Icons.lock_outline_rounded), title: const Text('Apply Password'), onTap: () { Navigator.pop(context); _handleSecurity(); }),
             ListTile(leading: const Icon(Icons.image_rounded), title: const Text('Insert Image'), onTap: () { Navigator.pop(context); _pickImageForPlacement(); }),
           ],
         ),
       ),
+    );
+  }
+
+  void _openPageManager() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => PageManagerView(stateController: widget.stateController)),
     );
   }
 
@@ -345,8 +366,28 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     setState(() => _isPlacingSignature = false);
   }
 
+  Future<void> _burnShapeToPdf(Offset screenPos, Size size) async {
+    final pageIndex = widget.stateController.activePageNumber - 1;
+    final currentBytes = widget.stateController.currentBytes!;
+    
+    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+    
+    final updatedBytes = await PdfService.addShapeAnnotation(
+      bytes: currentBytes,
+      pageIndex: pageIndex,
+      bounds: Rect.fromLTWH(screenPos.dx, screenPos.dy, size.width, size.height),
+      shapeType: _activeShapeType!.name.toUpperCase(),
+    );
+
+    if (!mounted) return;
+    Navigator.pop(context);
+    
+    widget.stateController.commitMutation(updatedBytes);
+    setState(() => _isPlacingShape = false);
+  }
+
   void _handleCanvasTapIntercept(PdfGestureDetails details) async {
-    // Signature logic handled via Burn button
+    // Interaction handled via overlays
   }
 
   Future<void> _handleRotation() async {
