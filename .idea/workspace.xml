@@ -5,12 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3b6dc0e0-037a-4e5e-86a1-6da39bcbd08e" name="Changes" comment="new studio">
-      <change afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/neural_edit_overlay.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/neural_live_editor.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/services/neural_engine/layout_analyzer.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/services/neural_engine/neural_vision_engine.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/pdf_workspace_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/pdf_workspace_view.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/services/pdf_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/pdf_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
