@@ -31,7 +31,7 @@ class PdfProTheme {
         bodyLarge: GoogleFonts.inter(color: textDark),
         bodyMedium: GoogleFonts.inter(color: textLight),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surfaceWhite,
         elevation: 0,
         shape: RoundedRectangleBorder(
