@@ -216,7 +216,30 @@ class PdfService {
     return Uint8List.fromList(savedBytes);
   }
 
-  /// Retrieves all form field names and their current values
+  /// Neural Search: Finds text lines and groups them
+  static List<sf.TextLine> extractTextLines(Uint8List bytes, int pageIndex) {
+    final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
+    final List<sf.TextLine> lines = sf.PdfTextExtractor(document).extractTextLines(startPageIndex: pageIndex);
+    
+    document.dispose();
+    return lines;
+  }
+
+  /// White-out: Surgically removes original text area by drawing a white rectangle
+  static Future<Uint8List> redactArea(Uint8List bytes, int pageIndex, Rect bounds) async {
+    final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
+    final sf.PdfPage page = document.pages[pageIndex];
+    
+    // Draw opaque white box to "hide" original content
+    page.graphics.drawRectangle(
+      brush: sf.PdfBrushes.white,
+      bounds: bounds,
+    );
+
+    final List<int> savedBytes = await document.save();
+    document.dispose();
+    return Uint8List.fromList(savedBytes);
+  }
   static Map<String, String> getFormFields(Uint8List bytes) {
     final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
     final Map<String, String> fields = {};
@@ -371,21 +394,15 @@ class PdfService {
     final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
     final sf.PdfPage page = document.pages[pageIndex];
 
-    final sf.PdfFreeTextAnnotation freeText = sf.PdfFreeTextAnnotation(
+    final sf.PdfTextBoxField textBox = sf.PdfTextBoxField(
+      page,
+      'editable_text_${DateTime.now().millisecondsSinceEpoch}',
       bounds,
-      text,
-      sf.PdfStandardFont(sf.PdfFontFamily.helvetica, fontSize),
+      text: text,
+      font: sf.PdfStandardFont(sf.PdfFontFamily.helvetica, fontSize),
     );
     
-    freeText.font = sf.PdfStandardFont(sf.PdfFontFamily.helvetica, fontSize);
-    if (textColor != null) {
-      freeText.color = textColor;
-    }
-    
-    // Set border to none for a clean text box feel
-    freeText.border.width = 0;
-    
-    page.annotations.add(freeText);
+    document.form.fields.add(textBox);
 
     final List<int> savedBytes = await document.save();
     document.dispose();
