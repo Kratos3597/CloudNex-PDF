@@ -1,38 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/theme/cyberpunk_theme.dart';
+import 'core/theme/pdf_pro_theme.dart';
 import 'features/workspace/presentation/workspace_shell.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Enable Edge-to-Edge display for modern scaling
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: Colors.transparent, // Modern transparent bar
-    systemNavigationBarIconBrightness: Brightness.light,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: Colors.white,
+    systemNavigationBarIconBrightness: Brightness.dark,
   ));
 
   runApp(
     const ProviderScope(
-      child: CloudNexApp(),
+      child: PdfProApp(),
     ),
   );
 }
 
-class CloudNexApp extends StatelessWidget {
-  const CloudNexApp({super.key});
+class PdfProApp extends StatelessWidget {
+  const PdfProApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'CloudNex PDF Editor',
+      title: 'PDF Pro Reader',
       debugShowCheckedModeBanner: false,
-      theme: CyberpunkTheme.darkTheme,
+      theme: PdfProTheme.lightTheme,
       home: const WorkspaceShell(),
     );
   }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
-import '../../../core/theme/cyberpunk_theme.dart';
+import '../../../core/theme/pdf_pro_theme.dart';
 import '../services/analytics_service.dart';
 
 class AnalyticsView extends ConsumerWidget {
@@ -11,115 +11,115 @@ class AnalyticsView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: const Text('Activity Insights'),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 24),
-            Text("SYSTEM_METRICS //", style: CyberpunkTheme.neonTextStyle(fontSize: 24, bold: true)),
-            const SizedBox(height: 8),
-            Text("OPERATIONAL AUDIT TRAIL & USAGE ANALYTICS", style: CyberpunkTheme.neonTextStyle(color: CyberpunkTheme.neonPink, fontSize: 11)),
+            _buildStatSummary(),
             const SizedBox(height: 32),
-            
-            _buildStatGrid(),
-            const SizedBox(height: 32),
-            
-            Text("AUDIT_LOG //", style: CyberpunkTheme.neonTextStyle(fontSize: 14, bold: true)),
+            Text(
+              "Recent Activity",
+              style: PdfProTheme.lightTheme.textTheme.titleLarge,
+            ),
             const SizedBox(height: 16),
-            Expanded(child: _buildAuditTrail()),
+            Expanded(child: _buildLogList()),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatGrid() {
+  Widget _buildStatSummary() {
     final stats = analyticsService.getActionStats();
     return Row(
       children: [
-        _buildStatCard("OPENED", stats["OPEN_DOCUMENT"]?.toString() ?? "0", CyberpunkTheme.neonCyan),
-        const SizedBox(width: 16),
-        _buildStatCard("MODIFIED", stats["MODIFY_DOCUMENT"]?.toString() ?? "0", CyberpunkTheme.neonPink),
-        const SizedBox(width: 16),
-        _buildStatCard("EXPORTED", stats["EXPORT_DOCUMENT"]?.toString() ?? "0", CyberpunkTheme.neonGreen),
+        _buildSummaryCard("Viewed", stats["OPEN_DOCUMENT"]?.toString() ?? "0", PdfProTheme.primaryBlue),
+        const SizedBox(width: 12),
+        _buildSummaryCard("Edited", stats["MODIFY_DOCUMENT"]?.toString() ?? "0", PdfProTheme.accentIndigo),
+        const SizedBox(width: 12),
+        _buildSummaryCard("Exported", stats["EXPORT_DOCUMENT"]?.toString() ?? "0", PdfProTheme.successGreen),
       ],
     ).animate().fadeIn().slideY(begin: 0.1, end: 0);
   }
 
-  Widget _buildStatCard(String label, String value, Color color) {
+  Widget _buildSummaryCard(String label, String value, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: CyberpunkTheme.glassDecoration(borderColor: color.withValues(alpha: 0.3)),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.1)),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: CyberpunkTheme.neonTextStyle(color: color, fontSize: 10, bold: true)),
+            Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
+            Text(value, style: TextStyle(color: PdfProTheme.textDark, fontSize: 22, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAuditTrail() {
+  Widget _buildLogList() {
     return ListenableBuilder(
       listenable: analyticsService,
       builder: (context, _) {
         final logs = analyticsService.auditTrail;
         if (logs.isEmpty) {
-          return Center(child: Text("[!] NO LOG DATA FOUND", style: CyberpunkTheme.neonTextStyle(color: Colors.white24)));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.history_rounded, size: 48, color: Colors.grey.shade300),
+                const SizedBox(height: 12),
+                const Text("No activity recorded yet", style: TextStyle(color: PdfProTheme.textLight)),
+              ],
+            ),
+          );
         }
         return ListView.builder(
           itemCount: logs.length,
           itemBuilder: (context, index) {
             final log = logs[index];
             return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: CyberpunkTheme.glassDecoration(
-                borderColor: Colors.white12,
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getActionColor(log.action).withValues(alpha: 0.1),
-                      border: Border.all(color: _getActionColor(log.action)),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(log.action, style: TextStyle(color: _getActionColor(log.action), fontSize: 9, fontWeight: FontWeight.bold)),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(log.documentName, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                        Text("BY: ${log.user} // ${DateFormat('HH:mm:ss').format(log.timestamp)}", 
-                          style: const TextStyle(color: Colors.white38, fontSize: 10, fontFamily: 'monospace')),
-                      ],
-                    ),
-                  ),
-                ],
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  backgroundColor: _getActionColor(log.action).withValues(alpha: 0.1),
+                  child: Icon(_getActionIcon(log.action), color: _getActionColor(log.action), size: 18),
+                ),
+                title: Text(log.documentName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                subtitle: Text("${DateFormat('MMM d, HH:mm').format(log.timestamp)}", style: const TextStyle(fontSize: 11)),
+                trailing: Text(log.action.replaceAll('_', ' '), style: TextStyle(fontSize: 10, color: _getActionColor(log.action), fontWeight: FontWeight.bold)),
               ),
-            ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.05, end: 0);
+            );
           },
         );
       },
     );
   }
 
+  IconData _getActionIcon(String action) {
+    if (action.contains('OPEN')) return Icons.visibility_rounded;
+    if (action.contains('MODIFY')) return Icons.edit_rounded;
+    return Icons.ios_share_rounded;
+  }
+
   Color _getActionColor(String action) {
-    switch (action) {
-      case "OPEN_DOCUMENT": return CyberpunkTheme.neonCyan;
-      case "MODIFY_DOCUMENT": return CyberpunkTheme.neonPink;
-      case "EXPORT_DOCUMENT": return CyberpunkTheme.neonGreen;
-      default: return Colors.white;
-    }
+    if (action.contains('OPEN')) return PdfProTheme.primaryBlue;
+    if (action.contains('MODIFY')) return PdfProTheme.accentIndigo;
+    return PdfProTheme.successGreen;
   }
 }

@@ -1,13 +1,12 @@
-import 'package:cloudnex_pdf_reader/core/providers/pdf_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../../core/theme/cyberpunk_theme.dart';
+import '../../../core/theme/pdf_pro_theme.dart';
 import '../../../core/providers/storage_providers.dart';
 import '../../library/domain/models/document_record.dart';
 import '../../pdf_editor/presentation/pdf_workspace_view.dart';
-import '../../pdf_editor/controller/pdf_state_controller.dart';
+import '../../../core/providers/pdf_provider.dart';
 import 'dart:io';
 
 class DashboardView extends ConsumerWidget {
@@ -19,97 +18,120 @@ class DashboardView extends ConsumerWidget {
     final pdfState = ref.watch(pdfStateProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: const Text('PDF Pro'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: PdfProTheme.textLight),
+            onPressed: () {},
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: CustomScrollView(
         slivers: [
-          _buildAppBar(),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildQuickActions(context, ref),
-                  const SizedBox(height: 32),
                   Text(
-                    "RECENT_SESSIONS //",
-                    style: CyberpunkTheme.neonTextStyle(fontSize: 14, bold: true),
-                  ).animate().shimmer(duration: 2.seconds),
-                  const SizedBox(height: 16),
+                    "Welcome back",
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: PdfProTheme.textDark,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "What would you like to do today?",
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 24),
+                  _buildActionGrid(context, ref),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Recent Documents",
+                        style: PdfProTheme.lightTheme.textTheme.titleLarge,
+                      ),
+                      TextButton(
+                        onPressed: () {},
+                        child: const Text("View All"),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
           ),
           documentsAsync.when(
             data: (docs) => SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
-                  (context, index) => _DocumentTile(doc: docs[index], pdfState: pdfState)
+                  (context, index) => _DocumentCard(doc: docs[index], pdfState: pdfState)
                       .animate()
-                      .fadeIn(delay: (index * 100).ms)
-                      .slideX(begin: 0.2, end: 0),
+                      .fadeIn(delay: (index * 50).ms)
+                      .moveX(begin: 10, end: 0),
                   childCount: docs.length,
                 ),
               ),
             ),
-            loading: () => const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator())),
-            error: (e, s) => SliverToBoxAdapter(child: Text("Error: $e")),
+            loading: () => const SliverToBoxAdapter(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (e, s) => SliverToBoxAdapter(child: Text("Error loading documents: $e")),
           ),
           if (documentsAsync.value?.isEmpty ?? true)
             const SliverToBoxAdapter(
               child: Center(
                 child: Padding(
-                  padding: EdgeInsets.only(top: 100),
-                  child: Text("No documents found.", style: TextStyle(color: Colors.white24)),
+                  padding: EdgeInsets.only(top: 60),
+                  child: Text("No documents in your library", style: TextStyle(color: PdfProTheme.textLight)),
                 ),
               ),
             ),
         ],
       ),
-    );
-  }
-
-  Widget _buildAppBar() {
-    return SliverAppBar(
-      backgroundColor: Colors.transparent,
-      expandedHeight: 120,
-      floating: true,
-      flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 24, bottom: 16),
-        title: Text(
-          "CORE_WORKSPACE",
-          style: CyberpunkTheme.neonTextStyle(fontSize: 24, bold: true),
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _handleImport(ref),
+        label: const Text("Open PDF"),
+        icon: const Icon(Icons.add),
+        backgroundColor: PdfProTheme.primaryBlue,
+        foregroundColor: Colors.white,
       ),
     );
   }
 
-  Widget _buildQuickActions(BuildContext context, WidgetRef ref) {
+  Widget _buildActionGrid(BuildContext context, WidgetRef ref) {
     return Row(
       children: [
-        _QuickActionCard(
-          icon: Icons.add,
-          label: "New PDF",
-          color: CyberpunkTheme.neonCyan,
+        _QuickAction(
+          icon: Icons.upload_file_rounded,
+          label: "Upload",
+          color: PdfProTheme.primaryBlue,
           onTap: () => _handleImport(ref),
         ),
         const SizedBox(width: 16),
-        _QuickActionCard(
-          icon: Icons.auto_awesome,
-          label: "AI Neural",
-          color: CyberpunkTheme.neonPink,
+        _QuickAction(
+          icon: Icons.create_new_folder_rounded,
+          label: "New Folder",
+          color: PdfProTheme.accentIndigo,
           onTap: () {},
         ),
         const SizedBox(width: 16),
-        _QuickActionCard(
-          icon: Icons.grid_view,
-          label: "Sync Matrix",
-          color: CyberpunkTheme.neonYellow,
+        _QuickAction(
+          icon: Icons.auto_graph_rounded,
+          label: "Analytics",
+          color: PdfProTheme.successGreen,
           onTap: () {},
         ),
       ],
-    ).animate().fadeIn().slideY(begin: 0.2, end: 0);
+    );
   }
 
   Future<void> _handleImport(WidgetRef ref) async {
@@ -131,13 +153,13 @@ class DashboardView extends ConsumerWidget {
   }
 }
 
-class _QuickActionCard extends StatelessWidget {
+class _QuickAction extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
   final VoidCallback onTap;
 
-  const _QuickActionCard({
+  const _QuickAction({
     required this.icon,
     required this.label,
     required this.color,
@@ -149,21 +171,21 @@ class _QuickActionCard extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 20),
-          decoration: CyberpunkTheme.glassDecoration(
-            borderRadius: BorderRadius.circular(16),
-            borderColor: color.withValues(alpha: 0.5),
-            showGlow: true,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
           ),
           child: Column(
             children: [
               Icon(icon, color: color, size: 28),
               const SizedBox(height: 8),
               Text(
-                label.toUpperCase(),
-                style: CyberpunkTheme.neonTextStyle(color: color, fontSize: 10, bold: true),
+                label,
+                style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -173,21 +195,18 @@ class _QuickActionCard extends StatelessWidget {
   }
 }
 
-class _DocumentTile extends StatelessWidget {
+class _DocumentCard extends StatelessWidget {
   final DocumentRecord doc;
-  final PdfStateController pdfState;
+  final dynamic pdfState;
 
-  const _DocumentTile({required this.doc, required this.pdfState});
+  const _DocumentCard({required this.doc, required this.pdfState});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: CyberpunkTheme.glassDecoration(
-        borderRadius: BorderRadius.circular(16),
-        borderColor: Colors.white24,
-      ),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         onTap: () async {
           final file = File(doc.filePath);
           if (await file.exists()) {
@@ -203,29 +222,25 @@ class _DocumentTile extends StatelessWidget {
           }
         },
         leading: Container(
-          width: 40,
-          height: 40,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
-            color: CyberpunkTheme.neonCyan.withValues(alpha: 0.1),
+            color: PdfProTheme.primaryBlue.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(Icons.picture_as_pdf, color: CyberpunkTheme.neonCyan, size: 20),
+          child: const Icon(Icons.picture_as_pdf_rounded, color: PdfProTheme.primaryBlue),
         ),
         title: Text(
           doc.fileName,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.w600, color: PdfProTheme.textDark),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          "Last opened: ${doc.lastOpenedDate.day}/${doc.lastOpenedDate.month}",
-          style: const TextStyle(color: Colors.white54, fontSize: 12),
+          "Edited ${doc.lastOpenedDate.day}/${doc.lastOpenedDate.month}",
+          style: const TextStyle(color: PdfProTheme.textLight, fontSize: 12),
         ),
-        trailing: IconButton(
-          icon: Icon(
-            doc.isFavorite ? Icons.star : Icons.star_border,
-            color: doc.isFavorite ? Colors.amber : Colors.white24,
-          ),
-          onPressed: () {},
-        ),
+        trailing: const Icon(Icons.more_vert_rounded, color: PdfProTheme.textLight),
       ),
     );
   }

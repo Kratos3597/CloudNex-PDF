@@ -48,7 +48,7 @@ class _PdfViewerScreenState extends ConsumerState<PdfViewerScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: CyberpunkTheme.neonCyan.withOpacity(0.9),
+          backgroundColor: CyberpunkTheme.neonCyan.withValues(alpha: 0.9),
           content: Text("// DOCUMENT_SAVED_AT: $newPath", style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         ),
       );
