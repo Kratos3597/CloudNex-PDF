@@ -10,176 +10,42 @@ import 'signature_pad_view.dart';
 import 'package:cloudnex_pdf_reader/features/analytics/services/analytics_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:printing/printing.dart';
-import 'interactive_signature_overlay.dart';
-import 'interactive_shape_overlay.dart';
-import 'page_manager_view.dart';
+import 'interactive_text_overlay.dart';
 import '../../profile/services/signature_service.dart';
+// ... existing imports ...
 
 class PdfWorkspaceView extends StatefulWidget {
-  final PdfStateController stateController;
-  const PdfWorkspaceView({super.key, required this.stateController});
-
-  @override
-  State<PdfWorkspaceView> createState() => _PdfWorkspaceViewState();
+// ...
 }
 
 class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
-  final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey<SfPdfViewerState>();
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final TextEditingController _searchController = TextEditingController();
-  bool _isSearching = false;
-  sf.PdfBookmarkBase? _bookmarks;
-  Uint8List? _pendingSignature;
+// ...
   bool _isPlacingSignature = false;
+  bool _isPlacingText = false;
   ShapeType? _activeShapeType;
-  bool _isPlacingShape = false;
-
+// ...
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: const Color(0xFFE1E4E8),
-      appBar: _buildAppBar(),
-      drawer: _buildOutlineDrawer(),
-      body: ListenableBuilder(
-        listenable: widget.stateController,
-        builder: (context, _) {
-          if (widget.stateController.sessions.isEmpty) {
-            return const Center(child: Text('No active documents'));
-          }
-
-          final session = widget.stateController.activeSession;
-          if (session == null) return const Center(child: CircularProgressIndicator());
-          
-          final byteStream = session.currentBytes;
-          if (byteStream == null) return const Center(child: Text('Data stream lost'));
-
+// ...
           return Stack(
             children: [
-              Column(
-                children: [
-                  _buildTabBar(),
-                  if (_isSearching) _buildSearchBar(session),
-                  Expanded(
-                    child: SfPdfViewer.memory(
-                      byteStream,
-                      key: ValueKey("${session.id}_${byteStream.hashCode}"),
-                      controller: session.pdfViewerController,
-                      initialPageNumber: session.activePageNumber,
-                      interactionMode: widget.stateController.currentTool == ActivePdfTool.none 
-                          ? PdfInteractionMode.pan : PdfInteractionMode.selection,
-                      onTap: _handleCanvasTapIntercept,
-                      onPageChanged: (details) => widget.stateController.updatePageNumber(details.newPageNumber),
-                      onTextSelectionChanged: _handleTextSelection,
-                      onDocumentLoaded: (details) {
-                        setState(() {
-                          _bookmarks = details.document.bookmarks;
-                        });
-                      },
-                    ),
-                  ),
-                  _buildToolDock(),
-                ],
-              ),
+// ...
               if (_isPlacingSignature && _pendingSignature != null)
                 InteractiveSignatureOverlay(
                   imageBytes: _pendingSignature!,
                   onCancel: () => setState(() => _isPlacingSignature = false),
                   onConfirm: (pos, size) => _burnSignatureToPdf(pos, size),
                 ),
-              if (_isPlacingShape && _activeShapeType != null)
-                InteractiveShapeOverlay(
-                  type: _activeShapeType!,
-                  onCancel: () => setState(() => _isPlacingShape = false),
-                  onConfirm: (pos, size) => _burnShapeToPdf(pos, size),
+              if (_isPlacingText)
+                InteractiveTextOverlay(
+                  onCancel: () => setState(() => _isPlacingText = false),
+                  onConfirm: (text, pos, size, fontSize, color) => _burnTextToPdf(text, pos, size, fontSize, color),
                 ),
+              if (_isPlacingShape && _activeShapeType != null)
+// ...
             ],
           );
         },
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.white,
-      leading: IconButton(
-        icon: const Icon(Icons.menu_rounded, color: PdfProTheme.textDark),
-        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-      ),
-      title: Text(widget.stateController.activeSession?.fileName ?? "CloudNex PDF Pro"),
-      actions: [
-        IconButton(icon: const Icon(Icons.search_rounded), onPressed: () => setState(() => _isSearching = !_isSearching)),
-        IconButton(icon: const Icon(Icons.undo_rounded), onPressed: widget.stateController.canUndo ? () => widget.stateController.undo() : null),
-        IconButton(icon: const Icon(Icons.redo_rounded), onPressed: widget.stateController.canRedo ? () => widget.stateController.redo() : null),
-        const SizedBox(width: 8),
-      ],
-    );
-  }
-
-  Widget _buildTabBar() {
-    return Container(
-      height: 44,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-      ),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: widget.stateController.sessions.length,
-        itemBuilder: (context, index) {
-          final session = widget.stateController.sessions[index];
-          final isActive = index == widget.stateController.activeSessionIndex;
-          return GestureDetector(
-            onTap: () => widget.stateController.switchToSession(index),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: isActive ? PdfProTheme.backgroundLight : Colors.white,
-                border: Border(right: BorderSide(color: Colors.grey.shade200)),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    session.fileName,
-                    style: TextStyle(
-                      color: isActive ? PdfProTheme.primaryBlue : PdfProTheme.textLight,
-                      fontSize: 12,
-                      fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                  if (widget.stateController.sessions.length > 1) ...[
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => widget.stateController.closeSession(index),
-                      child: Icon(Icons.close_rounded, size: 14, color: isActive ? PdfProTheme.primaryBlue : PdfProTheme.textLight),
-                    ),
-                  ]
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSearchBar(PdfSession session) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Colors.white,
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: "Search in document...",
-          prefixIcon: const Icon(Icons.search_rounded),
-          suffixIcon: IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => setState(() => _isSearching = false)),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-          filled: true,
-          fillColor: PdfProTheme.backgroundLight,
-        ),
-        onSubmitted: (val) => session.pdfViewerController.searchText(val),
       ),
     );
   }
@@ -197,18 +63,47 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
           _DockButton(icon: Icons.border_color_rounded, label: "Annotate", 
             onPressed: _showAnnotationOptions,
             isActive: widget.stateController.currentTool == ActivePdfTool.highlight),
+          _DockButton(icon: Icons.text_fields_rounded, label: "Text", 
+            onPressed: () => setState(() => _isPlacingText = true),
+            isActive: _isPlacingText),
           _DockButton(icon: Icons.gesture_rounded, label: "Sign", 
             onPressed: _openSignatureVault,
             isActive: _isPlacingSignature),
           _DockButton(icon: Icons.edit_document, label: "Edit", onPressed: _showEditOptions),
-          _DockButton(icon: Icons.text_fields_rounded, label: "Forms", onPressed: _handleFormFilling),
           _DockButton(icon: Icons.save_alt_rounded, label: "Export", onPressed: _showExportOptions),
         ],
       ),
     );
   }
 
-  Widget _buildOutlineDrawer() {
+  Future<void> _burnTextToPdf(String text, Offset screenPos, Size size, double fontSize, Color color) async {
+    if (text.isEmpty) {
+      setState(() => _isPlacingText = false);
+      return;
+    }
+
+    final pageIndex = widget.stateController.activePageNumber - 1;
+    final currentBytes = widget.stateController.currentBytes!;
+    
+    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+    
+    final updatedBytes = await PdfService.addFreeTextAnnotation(
+      bytes: currentBytes,
+      pageIndex: pageIndex,
+      bounds: Rect.fromLTWH(screenPos.dx, screenPos.dy, size.width, size.height),
+      text: text,
+      fontSize: fontSize,
+      textColor: sf.PdfColor(color.red, color.green, color.blue),
+    );
+
+    if (!mounted) return;
+    Navigator.pop(context);
+    
+    widget.stateController.commitMutation(updatedBytes);
+    setState(() => _isPlacingText = false);
+  }
+// ...
+et _buildOutlineDrawer() {
     final session = widget.stateController.activeSession;
     return Drawer(
       child: Column(

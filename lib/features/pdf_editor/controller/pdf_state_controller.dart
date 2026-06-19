@@ -7,7 +7,7 @@ import '../services/pdf_modifier_service.dart';
 import 'package:cloudnex_pdf_reader/features/analytics/services/analytics_service.dart';
 import 'package:cloudnex_pdf_reader/services/storage/isar_service.dart';
 
-enum ActivePdfTool { none, highlight, underline, strikeout, ink, rectangle, circle, signaturePlacement }
+enum ActivePdfTool { none, highlight, underline, strikeout, ink, rectangle, circle, signaturePlacement, textPlacement }
 
 class PdfSession {
   final String id;

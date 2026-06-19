@@ -1,15 +1,14 @@
-# Task Management - PDF Pro Interactive Layer
+# Task Management - Final Pro Polish & Toolset
 
-- [/] Signature Management & Vault
-    - [ ] Create `SignatureVaultView` to upload and store signatures
-    - [ ] Implement Background Removal heuristic for signatures
-- [/] Interactive Workspace Overhaul
-    - [ ] Enable Native Syncfusion Form Filling
-    - [ ] Implement `DraggableSignatureOverlay` for move/resize
-    - [ ] Implement "Burn" logic to commit overlay to PDF bytes
-    - [ ] Enable Freehand Ink Tool and Shapes
-- [ ] Advanced Page Manipulation
-    - [ ] Add `PageManagerView` for reordering and bulk deletion
-- [ ] Branding & Polish
-    - [ ] Ensure "CloudNex PDF Pro" branding throughout
-    - [ ] Final UI/UX refinement for productivity
+- [ ] Production "Outer Shell"
+    - [ ] Create assets for App Icon and Splash Screen
+    - [ ] Implement `flutter_native_splash` configuration
+    - [ ] Configure `flutter_launcher_icons`
+- [/] Extended Pro Tools
+    - [ ] Implement **Visual Page Reordering** (Drag & Drop in Page Manager)
+    - [ ] Add **Freehand Ink Tool** for on-canvas drawing
+    - [ ] Implement **Watermarking Tool** (Stamps: DRAFT, CONFIDENTIAL)
+    - [ ] Add **PDF Compression** logic
+- [ ] Final Build & Deployment
+    - [ ] Generate production-ready APK
+    - [ ] Push final source to GitHub

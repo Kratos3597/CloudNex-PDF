@@ -358,4 +358,37 @@ class PdfService {
     document.dispose();
     return Uint8List.fromList(savedBytes);
   }
+
+  /// Adds a FreeText annotation (Live Editable Text)
+  static Future<Uint8List> addFreeTextAnnotation({
+    required Uint8List bytes,
+    required int pageIndex,
+    required Rect bounds,
+    required String text,
+    double fontSize = 14,
+    sf.PdfColor? textColor,
+  }) async {
+    final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
+    final sf.PdfPage page = document.pages[pageIndex];
+
+    final sf.PdfFreeTextAnnotation freeText = sf.PdfFreeTextAnnotation(
+      bounds,
+      text,
+      sf.PdfStandardFont(sf.PdfFontFamily.helvetica, fontSize),
+    );
+    
+    freeText.font = sf.PdfStandardFont(sf.PdfFontFamily.helvetica, fontSize);
+    if (textColor != null) {
+      freeText.color = textColor;
+    }
+    
+    // Set border to none for a clean text box feel
+    freeText.border.width = 0;
+    
+    page.annotations.add(freeText);
+
+    final List<int> savedBytes = await document.save();
+    document.dispose();
+    return Uint8List.fromList(savedBytes);
+  }
 }
