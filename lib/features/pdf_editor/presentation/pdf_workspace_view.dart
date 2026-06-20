@@ -28,7 +28,7 @@ import '../domain/models/shadow_object.dart';
 
 class PdfWorkspaceView extends StatefulWidget {
   final PdfStateController stateController;
-  const PdfWorkspaceView({super.key});
+  const PdfWorkspaceView({super.key, required this.stateController});
 
   @override
   State<PdfWorkspaceView> createState() => _PdfWorkspaceViewState();
@@ -98,12 +98,9 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
                           initialPageNumber: session.activePageNumber,
                           pageLayoutMode: PdfPageLayoutMode.continuous,
                           scrollDirection: PdfScrollDirection.vertical,
-                          // OPTIMIZATION: Hardware-accelerated interaction
-                          interactionMode: _isMagnifierActive 
-                              ? PdfInteractionMode.magnifier 
-                              : (widget.stateController.currentTool == ActivePdfTool.none || widget.stateController.currentTool == ActivePdfTool.select
+                          interactionMode: (widget.stateController.currentTool == ActivePdfTool.none || widget.stateController.currentTool == ActivePdfTool.select)
                                   ? PdfInteractionMode.pan 
-                                  : PdfInteractionMode.selection),
+                                  : PdfInteractionMode.selection,
                           onTap: _handleCanvasTapIntercept,
                           onPageChanged: (details) => widget.stateController.updatePageNumber(details.newPageNumber),
                           onTextSelectionChanged: _handleTextSelection,
@@ -113,11 +110,12 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
                             });
                           },
                         ),
-                        // SHADOW LAYER: Live interactive widgets
                         InteractiveShadowLayer(
                           stateController: widget.stateController,
                           pdfViewerController: session.pdfViewerController,
                         ),
+                        if (_isMagnifierActive)
+                          _buildMagnifierLens(),
                       ],
                     ),
                   ),
@@ -164,93 +162,22 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     );
   }
 
-  void _addShadowSignature(Offset pos, Size size) {
-    widget.stateController.addShadowObject(ShadowObject(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      type: ShadowObjectType.signature,
-      position: pos,
-      size: size,
-      content: String.fromCharCodes(_pendingSignature!), // Simulating bytes as content for prototype
-      pageIndex: widget.stateController.activePageNumber - 1,
-    ));
-    setState(() => _isPlacingSignature = false);
-  }
-
-  void _addShadowText(String text, Offset pos, Size size, double fontSize, Color color) {
-    widget.stateController.addShadowObject(ShadowObject(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      type: ShadowObjectType.text,
-      position: pos,
-      size: size,
-      content: text,
-      fontSize: fontSize,
-      color: color,
-      pageIndex: widget.stateController.activePageNumber - 1,
-    ));
-    setState(() => _isPlacingText = false);
-  }
-
-  void _addShadowShape(Offset pos, Size size) {
-    widget.stateController.addShadowObject(ShadowObject(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      type: ShadowObjectType.shape,
-      position: pos,
-      size: size,
-      content: _activeShapeType!.name.toUpperCase(),
-      pageIndex: widget.stateController.activePageNumber - 1,
-    ));
-    setState(() => _isPlacingShape = false);
-  }
-
-  Future<void> _handleFlattenAndBurn() async {
-    final session = widget.stateController.activeSession;
-    if (session == null || session.shadowObjects.isEmpty) return;
-
-    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
-
-    try {
-      Uint8List currentBytes = session.currentBytes!;
-      
-      // Iterate through all shadow objects and burn them into the binary
-      for (var obj in session.shadowObjects) {
-        if (obj.type == ShadowObjectType.text) {
-          currentBytes = await PdfService.addFreeTextAnnotation(
-            bytes: currentBytes,
-            pageIndex: obj.pageIndex,
-            bounds: Rect.fromLTWH(obj.position.dx, obj.position.dy, obj.size.width, obj.size.height),
-            text: obj.content,
-            fontSize: obj.fontSize,
-            textColor: sf.PdfColor(obj.color.red, obj.color.green, obj.color.blue),
-          );
-        } else if (obj.type == ShadowObjectType.signature) {
-          currentBytes = await PdfModifierService.injectGraphicSignatureAsync(
-            originalBytes: currentBytes,
-            targetPageZeroIndexed: obj.pageIndex,
-            signatureImageBytes: Uint8List.fromList(obj.content.codeUnits),
-            bounds: Rect.fromLTWH(obj.position.dx, obj.position.dy, obj.size.width, obj.size.height),
-          );
-        } else if (obj.type == ShadowObjectType.shape) {
-          currentBytes = await PdfService.addShapeAnnotation(
-            bytes: currentBytes,
-            pageIndex: obj.pageIndex,
-            bounds: Rect.fromLTWH(obj.position.dx, obj.position.dy, obj.size.width, obj.size.height),
-            shapeType: obj.content,
-          );
-        }
-      }
-
-      if (!mounted) return;
-      Navigator.pop(context);
-      
-      widget.stateController.commitMutation(currentBytes);
-      session.shadowObjects.clear();
-      widget.stateController.clearActiveTool();
-      
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("CloudNex Compilation Complete: All edits flattened into PDF.")));
-    } catch (e) {
-      if (mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Flattening failed: $e")));
-    }
+  Widget _buildMagnifierLens() {
+    return Positioned(
+      top: 100,
+      left: 100,
+      child: Container(
+        width: 150,
+        height: 150,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: PdfProTheme.primaryBlue, width: 3),
+          boxShadow: [const BoxShadow(color: Colors.black26, blurRadius: 10)],
+          color: Colors.white,
+        ),
+        child: const Center(child: Icon(Icons.zoom_in_rounded, size: 40, color: PdfProTheme.primaryBlue)),
+      ),
+    );
   }
 
   PreferredSizeWidget _buildAppBar() {
@@ -511,34 +438,92 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     });
   }
 
-  Future<void> _burnSignatureToPdf(Offset screenPos, Size size) async {
-    final session = widget.stateController.activeSession;
-    if (session == null) return;
-    
-    final pageIndex = widget.stateController.activePageNumber - 1;
-    final currentBytes = widget.stateController.currentBytes!;
-    
-    final RenderBox? viewerBox = _pdfViewerKey.currentContext?.findRenderObject() as RenderBox?;
-    if (viewerBox == null) return;
-    
-    final Offset localViewportPos = viewerBox.globalToLocal(screenPos);
-    final Rect pageRect = Rect.fromLTWH(localViewportPos.dx, localViewportPos.dy, size.width, size.height);
-    
-    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
-    
-    final updatedBytes = await PdfModifierService.injectGraphicSignatureAsync(
-      originalBytes: currentBytes,
-      targetPageZeroIndexed: pageIndex,
-      signatureImageBytes: _pendingSignature!,
-      bounds: pageRect,
-      password: widget.stateController.activeDocumentPassword,
-    );
-
-    if (!mounted) return;
-    Navigator.pop(context);
-    
-    widget.stateController.commitMutation(updatedBytes);
+  void _addShadowSignature(Offset pos, Size size) {
+    widget.stateController.addShadowObject(ShadowObject(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      type: ShadowObjectType.signature,
+      position: pos,
+      size: size,
+      content: String.fromCharCodes(_pendingSignature!), 
+      pageIndex: widget.stateController.activePageNumber - 1,
+    ));
     setState(() => _isPlacingSignature = false);
+  }
+
+  void _addShadowText(String text, Offset pos, Size size, double fontSize, Color color) {
+    widget.stateController.addShadowObject(ShadowObject(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      type: ShadowObjectType.text,
+      position: pos,
+      size: size,
+      content: text,
+      fontSize: fontSize,
+      color: color,
+      pageIndex: widget.stateController.activePageNumber - 1,
+    ));
+    setState(() => _isPlacingText = false);
+  }
+
+  void _addShadowShape(Offset pos, Size size) {
+    widget.stateController.addShadowObject(ShadowObject(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      type: ShadowObjectType.shape,
+      position: pos,
+      size: size,
+      content: _activeShapeType!.name.toUpperCase(),
+      pageIndex: widget.stateController.activePageNumber - 1,
+    ));
+    setState(() => _isPlacingShape = false);
+  }
+
+  Future<void> _handleFlattenAndBurn() async {
+    final session = widget.stateController.activeSession;
+    if (session == null || session.shadowObjects.isEmpty) return;
+
+    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+
+    try {
+      Uint8List currentBytes = session.currentBytes!;
+      
+      for (var obj in session.shadowObjects) {
+        if (obj.type == ShadowObjectType.text) {
+          currentBytes = await PdfService.addFreeTextAnnotation(
+            bytes: currentBytes,
+            pageIndex: obj.pageIndex,
+            bounds: Rect.fromLTWH(obj.position.dx, obj.position.dy, obj.size.width, obj.size.height),
+            text: obj.content,
+            fontSize: obj.fontSize,
+            textColor: sf.PdfColor(obj.color.red, obj.color.green, obj.color.blue),
+          );
+        } else if (obj.type == ShadowObjectType.signature) {
+          currentBytes = await PdfModifierService.injectGraphicSignatureAsync(
+            originalBytes: currentBytes,
+            targetPageZeroIndexed: obj.pageIndex,
+            signatureImageBytes: Uint8List.fromList(obj.content.codeUnits),
+            bounds: Rect.fromLTWH(obj.position.dx, obj.position.dy, obj.size.width, obj.size.height),
+          );
+        } else if (obj.type == ShadowObjectType.shape) {
+          currentBytes = await PdfService.addShapeAnnotation(
+            bytes: currentBytes,
+            pageIndex: obj.pageIndex,
+            bounds: Rect.fromLTWH(obj.position.dx, obj.position.dy, obj.size.width, obj.size.height),
+            shapeType: obj.content,
+          );
+        }
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context);
+      
+      widget.stateController.commitMutation(currentBytes);
+      session.shadowObjects.clear();
+      widget.stateController.clearActiveTool();
+      
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("CloudNex Compilation Complete: All edits flattened into PDF.")));
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Flattening failed: $e")));
+    }
   }
 
   Future<void> _burnInkToPdf(List<List<Offset>> paths, double width, Color color) async {
@@ -579,7 +564,6 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
 
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
 
-    // Layer 1: Neural Vision Reconstruction
     final zones = await NpuAcceleratorService.analyzePageAsync(currentBytes, pageIndex);
     
     if (!mounted) return;
@@ -810,6 +794,8 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Export failed: $e")));
     }
   }
+
+  void _burnSignatureToPdf(Offset screenPos, Size size) {} // No longer used in Shadow mode
 }
 
 class _DockButton extends StatelessWidget {
