@@ -1,16 +1,16 @@
-# Task Management - S25 Ultra Feature Set
+# Task Management - Final "Adobe Pro" Feature Set
 
-- [/] 🖊️ Point 1: S Pen Integration
-    - [ ] Update `SignaturePadView` for Pressure-Sensitive Hand-writing
-    - [ ] Add "Stylus Only" mode with Palm Rejection
-- [ ] 🧠 Point 2: NPU-Optimized Neural Engine
-    - [ ] Refactor Vision logic into high-performance Isolate pipeline
-- [ ] 🖥️ Point 3: Samsung DeX "Desktop mode" UI
-    - [ ] Implement Ribbon Menu for large screens / DeX
-- [ ] 🚀 Point 4: 120Hz & High-RAM Performance
-    - [ ] Tune Render Engine and Cache settings for S25 Ultra
-- [ ] 💎 Point 5: "Ultra" Glass & Status Capsule
-    - [ ] Implement Dynamic Status Capsule (Top UI)
+- [/] 🔄 Point 1: Interactive Annotation Layer
+    - [ ] Implement "Select Mode" to move/resize existing items
+- [ ] 📝 Point 2: Sticky Notes & Comments
+    - [ ] Create UI for popup speech bubbles
+- [ ] 🔒 Point 3: Professional Finishing Tools
+    - [ ] Implement Flattening (Secure merging)
+    - [ ] Implement PDF Compression (Shrink size)
+    - [ ] Implement Watermarking Tool
+- [ ] 📐 Point 4: Engineering & UX Tools
+    - [ ] Add Arrow tool & Magnifier Glass
+- [ ] 📑 Point 5: Advanced Document Intel
+    - [ ] Metadata Editor & Split View support
 - [ ] Final Build & Deployment
-    - [ ] Push to GitHub
-    - [ ] Generate Ultra-Debug APK
+    - [ ] Comprehensive "Master Build" APK

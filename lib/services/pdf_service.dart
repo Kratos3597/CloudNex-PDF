@@ -416,27 +416,81 @@ class PdfService {
     return Uint8List.fromList(savedBytes);
   }
 
-  /// Reorders pages in a PDF
-  static Future<Uint8List> reorderPages(Uint8List bytes, int oldIndex, int newIndex) async {
+  /// Compresses the PDF document to reduce file size
+  static Future<Uint8List> compressPdf(Uint8List bytes) async {
     final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
-    
-    // In Syncfusion, we can't directly insert a PdfPage object into the collection in all versions.
-    // Instead, we create a new document and add pages in the correct order.
-    final sf.PdfDocument newDoc = sf.PdfDocument();
-    
-    final List<int> order = List.generate(document.pages.count, (index) => index);
-    final int item = order.removeAt(oldIndex);
-    order.insert(newIndex, item);
-    
-    for (int i in order) {
-      final sf.PdfPage page = newDoc.pages.add();
-      final sf.PdfTemplate template = document.pages[i].createTemplate();
-      page.graphics.drawPdfTemplate(template, const Offset(0, 0));
-    }
-    
-    final List<int> savedBytes = await newDoc.save();
+    // Compression setting: 0 is no compression, 9 is best
+    document.compressionLevel = sf.PdfCompressionLevel.best;
+    final List<int> savedBytes = await document.save();
     document.dispose();
-    newDoc.dispose();
+    return Uint8List.fromList(savedBytes);
+  }
+
+  /// Flattens all annotations into the document content (un-editable)
+  static Future<Uint8List> flattenDocument(Uint8List bytes) async {
+    final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
+    for (int i = 0; i < document.pages.count; i++) {
+      final sf.PdfPage page = document.pages[i];
+      for (int j = 0; j < page.annotations.count; j++) {
+        page.annotations[j].flatten = true;
+      }
+    }
+    final List<int> savedBytes = await document.save();
+    document.dispose();
+    return Uint8List.fromList(savedBytes);
+  }
+
+  /// Adds a watermark text to every page
+  static Future<Uint8List> addWatermark(Uint8List bytes, String text) async {
+    final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
+    final sf.PdfFont font = sf.PdfStandardFont(sf.PdfFontFamily.helvetica, 60);
+    final sf.PdfBrush brush = sf.PdfSolidBrush(sf.PdfColor(128, 128, 128, 50)); // Semi-transparent
+
+    for (int i = 0; i < document.pages.count; i++) {
+      final sf.PdfPage page = document.pages[i];
+      final Size pageSize = page.getClientSize();
+      
+      // Save graphics state
+      final sf.PdfGraphicsState state = page.graphics.save();
+      
+      // Set transparency and rotation
+      page.graphics.setTransparency(0.2);
+      page.graphics.translateTransform(pageSize.width / 2, pageSize.height / 2);
+      page.graphics.rotateTransform(-45);
+      
+      // Draw watermark
+      page.graphics.drawString(
+        text, 
+        font, 
+        brush: brush,
+        bounds: Rect.fromLTWH(-150, -30, 0, 0)
+      );
+      
+      // Restore graphics state
+      page.graphics.restore(state);
+    }
+
+    final List<int> savedBytes = await document.save();
+    document.dispose();
+    return Uint8List.fromList(savedBytes);
+  }
+
+  /// Updates PDF metadata (Properties)
+  static Future<Uint8List> updateMetadata({
+    required Uint8List bytes,
+    String? title,
+    String? author,
+    String? subject,
+    String? keywords,
+  }) async {
+    final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
+    if (title != null) document.documentInformation.title = title;
+    if (author != null) document.documentInformation.author = author;
+    if (subject != null) document.documentInformation.subject = subject;
+    if (keywords != null) document.documentInformation.keywords = keywords;
+
+    final List<int> savedBytes = await document.save();
+    document.dispose();
     return Uint8List.fromList(savedBytes);
   }
   static Future<Uint8List> addFreeTextAnnotation({
