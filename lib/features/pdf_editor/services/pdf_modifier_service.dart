@@ -24,14 +24,13 @@ class PdfSecurityReport {
 class PdfModifierService {
   PdfModifierService._();
 
-  // ✅ SAFE: encryption detection (Syncfusion 24.x compatible)
   static bool isDocumentEncrypted(Uint8List bytes) {
     try {
       final PdfDocument doc = PdfDocument(inputBytes: bytes);
       doc.dispose();
-      return false; // if it opens without password, not encrypted
+      return false; 
     } catch (_) {
-      return true; // fails to open = likely encrypted
+      return true; 
     }
   }
 
@@ -55,7 +54,7 @@ class PdfModifierService {
     try {
       document = PdfDocument(inputBytes: bytes, password: password);
 
-      final bool isEncrypted = false; // handled via try/catch logic above
+      final bool isEncrypted = false; 
 
       final int totalPages = document.pages.count;
 
@@ -87,7 +86,7 @@ class PdfModifierService {
     required Uint8List originalBytes,
     required int targetPageZeroIndexed,
     required Uint8List signatureImageBytes,
-    required Rect bounds,
+    required fm.Rect bounds,
     String? password,
   }) async {
     return await Isolate.run(() => _executeHeavyCompilation(
@@ -103,7 +102,7 @@ class PdfModifierService {
       Uint8List bytes,
       int page,
       Uint8List sig,
-      Rect bounds,
+      fm.Rect bounds,
       String? password,
       ) {
     PdfDocument? doc;
@@ -116,7 +115,6 @@ class PdfModifierService {
 
       final PdfPage pdfPage = doc.pages[page];
       
-      // Use the provided bounds directly (already converted to PDF points)
       pdfPage.graphics.drawImage(
         PdfBitmap(sig),
         bounds,

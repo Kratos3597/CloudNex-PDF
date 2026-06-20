@@ -390,19 +390,16 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     final pageIndex = widget.stateController.activePageNumber - 1;
     final currentBytes = widget.stateController.currentBytes!;
     
-    // PRECISION CALIBRATION: Use individual point conversion for accuracy
     final RenderBox? viewerBox = _pdfViewerKey.currentContext?.findRenderObject() as RenderBox?;
     if (viewerBox == null) return;
     
     final Offset localViewportPos = viewerBox.globalToLocal(screenPos);
     
-    final Offset topLeft = session.pdfViewerController.convertViewportToPage(
-      pageIndex + 1, 
+    final Offset topLeft = session.pdfViewerController.convertViewportToPageCoordinates(
       localViewportPos,
     );
     
-    final Offset bottomRight = session.pdfViewerController.convertViewportToPage(
-      pageIndex + 1,
+    final Offset bottomRight = session.pdfViewerController.convertViewportToPageCoordinates(
       localViewportPos.translate(size.width, size.height),
     );
     
@@ -437,13 +434,11 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     
     final Offset localViewportPos = viewerBox.globalToLocal(screenPos);
     
-    final Offset topLeft = session.pdfViewerController.convertViewportToPage(
-      pageIndex + 1, 
+    final Offset topLeft = session.pdfViewerController.convertViewportToPageCoordinates(
       localViewportPos,
     );
     
-    final Offset bottomRight = session.pdfViewerController.convertViewportToPage(
-      pageIndex + 1,
+    final Offset bottomRight = session.pdfViewerController.convertViewportToPageCoordinates(
       localViewportPos.translate(size.width, size.height),
     );
     
@@ -480,13 +475,11 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     
     final Offset localViewportPos = viewerBox.globalToLocal(screenPos);
     
-    final Offset topLeft = session.pdfViewerController.convertViewportToPage(
-      pageIndex + 1, 
+    final Offset topLeft = session.pdfViewerController.convertViewportToPageCoordinates(
       localViewportPos,
     );
     
-    final Offset bottomRight = session.pdfViewerController.convertViewportToPage(
-      pageIndex + 1,
+    final Offset bottomRight = session.pdfViewerController.convertViewportToPageCoordinates(
       localViewportPos.translate(size.width, size.height),
     );
     
@@ -548,13 +541,11 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
 
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
 
-    // Layer 1: Neural Vision Reconstruction
     final zones = NeuralVisionEngine.scanPage(currentBytes, pageIndex);
     
     if (!mounted) return;
     Navigator.pop(context);
 
-    // Identify target zone under finger/stylus
     NeuralZone? match;
     for (var zone in zones) {
       if (zone.bounds.contains(details.pagePosition)) {
@@ -579,7 +570,6 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
 
-    // Layer 5: Binary Stream Injection (Simulated via Redact + Inject)
     Uint8List updatedBytes = await PdfService.redactArea(
       currentBytes, 
       pageIndex, 
@@ -640,6 +630,10 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
       Navigator.pop(context);
       widget.stateController.commitMutation(updatedBytes);
     }
+  }
+  
+  Future<void> _handlePageDeletionCurrent() async {
+    _handlePageDeletion(widget.stateController.activePageNumber - 1);
   }
 
   Future<void> _handleSecurity() async {
