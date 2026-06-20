@@ -60,7 +60,7 @@ class AnalyticsView extends ConsumerWidget {
           children: [
             Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text(value, style: TextStyle(color: PdfProTheme.textDark, fontSize: 22, fontWeight: FontWeight.bold)),
+            Text(value, style: const TextStyle(color: PdfProTheme.textDark, fontSize: 22, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -101,7 +101,7 @@ class AnalyticsView extends ConsumerWidget {
                   child: Icon(_getActionIcon(log.action), color: _getActionColor(log.action), size: 18),
                 ),
                 title: Text(log.documentName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                subtitle: Text("${DateFormat('MMM d, HH:mm').format(log.timestamp)}", style: const TextStyle(fontSize: 11)),
+                subtitle: Text(DateFormat('MMM d, HH:mm').format(log.timestamp), style: const TextStyle(fontSize: 11)),
                 trailing: Text(log.action.replaceAll('_', ' '), style: TextStyle(fontSize: 10, color: _getActionColor(log.action), fontWeight: FontWeight.bold)),
               ),
             );

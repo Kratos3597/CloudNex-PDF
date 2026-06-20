@@ -31,7 +31,7 @@ class WordExportService {
 </w:document>''';
 
     // 2. Create the [Content_Types].xml
-    final contentTypesXml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    const contentTypesXml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
@@ -39,7 +39,7 @@ class WordExportService {
 </Types>''';
 
     // 3. Create _rels/.rels
-    final relsXml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    const relsXml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 </Relationships>''';

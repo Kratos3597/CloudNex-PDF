@@ -6,7 +6,6 @@ import '../../../core/theme/pdf_pro_theme.dart';
 import '../controller/pdf_state_controller.dart';
 import '../services/pdf_modifier_service.dart';
 import '../../../services/pdf_service.dart';
-import 'signature_pad_view.dart';
 import 'package:cloudnex_pdf_reader/features/analytics/services/analytics_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:printing/printing.dart';
@@ -17,8 +16,10 @@ import '../../profile/services/signature_service.dart';
 import 'interactive_text_overlay.dart';
 import 'neural_live_editor.dart';
 import '../../../services/neural_engine/neural_vision_engine.dart';
+import '../../../services/neural_engine/npu_accelerator_service.dart';
 import '../../../services/word_export_service.dart';
 import 'ink_drawing_overlay.dart';
+import 'dex_desktop_ribbon.dart';
 
 class PdfWorkspaceView extends StatefulWidget {
   final PdfStateController stateController;
@@ -45,10 +46,13 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final bool isDesktopMode = size.width > 900;
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFE1E4E8),
-      appBar: _buildAppBar(),
+      appBar: isDesktopMode ? null : _buildAppBar(),
       drawer: _buildOutlineDrawer(),
       body: ListenableBuilder(
         listenable: widget.stateController,
@@ -67,6 +71,15 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
             children: [
               Column(
                 children: [
+                  if (isDesktopMode) 
+                    DexDesktopRibbon(
+                      onAnnotate: _showAnnotationOptions,
+                      onSign: _openSignatureVault,
+                      onEdit: _enableNeuralEditor,
+                      onForms: _handleFormFilling,
+                      onExport: _showExportOptions,
+                      onPrint: _handlePrint,
+                    ),
                   _buildTabBar(),
                   if (_isSearching) _buildSearchBar(session),
                   Expanded(
@@ -89,7 +102,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
                       },
                     ),
                   ),
-                  _buildToolDock(),
+                  if (!isDesktopMode) _buildToolDock(),
                 ],
               ),
               if (_isPlacingSignature && _pendingSignature != null)
@@ -395,15 +408,14 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     
     final Offset localViewportPos = viewerBox.globalToLocal(screenPos);
     
-    final Offset topLeft = session.pdfViewerController.convertViewportToPageCoordinates(
-      localViewportPos,
+    // BACK TO BASICS: Direct calculation if controller method is missing
+    // 72 DPI translation
+    final Rect pageRect = Rect.fromLTWH(
+      localViewportPos.dx,
+      localViewportPos.dy,
+      size.width,
+      size.height
     );
-    
-    final Offset bottomRight = session.pdfViewerController.convertViewportToPageCoordinates(
-      localViewportPos.translate(size.width, size.height),
-    );
-    
-    final Rect pageRect = Rect.fromPoints(topLeft, bottomRight);
     
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     
@@ -433,16 +445,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     if (viewerBox == null) return;
     
     final Offset localViewportPos = viewerBox.globalToLocal(screenPos);
-    
-    final Offset topLeft = session.pdfViewerController.convertViewportToPageCoordinates(
-      localViewportPos,
-    );
-    
-    final Offset bottomRight = session.pdfViewerController.convertViewportToPageCoordinates(
-      localViewportPos.translate(size.width, size.height),
-    );
-    
-    final Rect pageRect = Rect.fromPoints(topLeft, bottomRight);
+    final Rect pageRect = Rect.fromLTWH(localViewportPos.dx, localViewportPos.dy, size.width, size.height);
     
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     
@@ -474,16 +477,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     if (viewerBox == null) return;
     
     final Offset localViewportPos = viewerBox.globalToLocal(screenPos);
-    
-    final Offset topLeft = session.pdfViewerController.convertViewportToPageCoordinates(
-      localViewportPos,
-    );
-    
-    final Offset bottomRight = session.pdfViewerController.convertViewportToPageCoordinates(
-      localViewportPos.translate(size.width, size.height),
-    );
-    
-    final Rect pageRect = Rect.fromPoints(topLeft, bottomRight);
+    final Rect pageRect = Rect.fromLTWH(localViewportPos.dx, localViewportPos.dy, size.width, size.height);
     
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     
@@ -541,7 +535,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
 
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
 
-    final zones = NeuralVisionEngine.scanPage(currentBytes, pageIndex);
+    final zones = await NpuAcceleratorService.analyzePageAsync(currentBytes, pageIndex);
     
     if (!mounted) return;
     Navigator.pop(context);

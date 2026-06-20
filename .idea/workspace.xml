@@ -4,7 +4,22 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3b6dc0e0-037a-4e5e-86a1-6da39bcbd08e" name="Changes" comment="new studio" />
+    <list default="true" id="3b6dc0e0-037a-4e5e-86a1-6da39bcbd08e" name="Changes" comment="new studio">
+      <change afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/dex_desktop_ribbon.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/services/neural_engine/npu_accelerator_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/Dart_SDK.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Dart_SDK.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/pdf_pro_reader_android.iml" beforeDir="false" afterPath="$PROJECT_DIR$/android/pdf_pro_reader_android.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/analytics/presentation/analytics_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/analytics/presentation/analytics_view.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/ink_drawing_overlay.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/ink_drawing_overlay.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/pdf_workspace_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/pdf_workspace_view.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/signature_pad_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/signature_pad_view.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/services/pdf_modifier_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/services/pdf_modifier_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/pdf_engine/presentation/pdf_viewer_screen.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/pdf_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/pdf_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/word_export_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/word_export_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pdf_pro_reader.iml" beforeDir="false" afterPath="$PROJECT_DIR$/pdf_pro_reader.iml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -77,12 +92,13 @@
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
     "dart.analysis.tool.window.visible": "false",
+    "dart.lsp.experimental.enabled": "false",
     "git-widget-placeholder": "main",
     "ignore.virus.scanning.warn.message": "true",
     "io.flutter.project.isFirstOpen": "true",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "C:/Projects/CloudNex-PDF",
-    "settings.editor.selected.configurable": "templates.modelproviders.configurable",
+    "settings.editor.selected.configurable": "dart.settings",
     "show.migrate.to.gradle.popup": "false"
   }
 }]]></component>

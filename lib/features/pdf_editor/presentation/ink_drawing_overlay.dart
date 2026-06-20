@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../core/theme/pdf_pro_theme.dart';
 
@@ -18,7 +17,7 @@ class InkDrawingOverlay extends StatefulWidget {
 
 class _InkDrawingOverlayState extends State<InkDrawingOverlay> {
   final List<List<Offset>> _paths = [];
-  double _strokeWidth = 3.0;
+  final double _strokeWidth = 3.0;
   Color _color = Colors.black;
 
   @override
@@ -55,11 +54,11 @@ class _InkDrawingOverlayState extends State<InkDrawingOverlay> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
+                const Row(
                   children: [
-                    const Icon(Icons.edit_rounded, color: PdfProTheme.primaryBlue),
-                    const SizedBox(width: 8),
-                    const Text("INK_TOOL", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    Icon(Icons.edit_rounded, color: PdfProTheme.primaryBlue),
+                    SizedBox(width: 8),
+                    Text("INK_TOOL", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                   ],
                 ),
                 Row(

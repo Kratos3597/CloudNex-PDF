@@ -36,7 +36,7 @@ class PdfService {
         
         final inputImage = InputImage.fromFilePath(tempFile.path);
         final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
-        fullText += recognizedText.text + "\n";
+        fullText += "${recognizedText.text}\n";
         
         if (await tempFile.exists()) await tempFile.delete();
       }
@@ -56,7 +56,7 @@ class PdfService {
     String csv = "";
     for (var line in lines) {
       final parts = line.text.split(RegExp(r'\s{2,}'));
-      csv += parts.map((e) => '"${e.replaceAll('"', '""')}"').join(',') + "\n";
+      csv += "${parts.map((e) => '"${e.replaceAll('"', '""')}"').join(',')}\n";
     }
     
     document.dispose();

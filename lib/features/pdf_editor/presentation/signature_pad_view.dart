@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart'; // REQUIRED for PointerDeviceKind
 import '../../../core/theme/pdf_pro_theme.dart';
 
 class SignaturePadView extends StatefulWidget {
@@ -19,13 +20,11 @@ class StrokePoint {
 class _SignaturePadViewState extends State<SignaturePadView> {
   final List<List<StrokePoint>> _strokes = [];
 
-  /// Compiles drawn coordinate vector lines into a transparent PNG byte array
-  /// Optimized for S25 Ultra high-fidelity S Pen data
   Future<Uint8List?> _exportCanvasToPngBytes() async {
     if (_strokes.isEmpty) return null;
 
     final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, 800, 400)); // High res export
+    final canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, 800, 400));
 
     for (final stroke in _strokes) {
       if (stroke.length < 2) continue;
@@ -34,11 +33,10 @@ class _SignaturePadViewState extends State<SignaturePadView> {
         final p1 = stroke[i];
         final p2 = stroke[i + 1];
         
-        // S25 Ultra S Pen Feature: Pressure-sensitive thickness
         final paint = Paint()
           ..color = Colors.black 
           ..strokeCap = StrokeCap.round
-          ..strokeWidth = (p1.pressure * 8.0).clamp(2.0, 10.0); // Variable width based on S Pen pressure
+          ..strokeWidth = (p1.pressure * 8.0).clamp(2.0, 10.0);
 
         canvas.drawLine(p1.offset * 2, p2.offset * 2, paint);
       }
@@ -63,7 +61,7 @@ class _SignaturePadViewState extends State<SignaturePadView> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20)],
+          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 20)],
         ),
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -92,7 +90,6 @@ class _SignaturePadViewState extends State<SignaturePadView> {
             ),
             const SizedBox(height: 20),
 
-            // Active drawing zone with Palm Rejection simulation
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -104,7 +101,6 @@ class _SignaturePadViewState extends State<SignaturePadView> {
                   borderRadius: BorderRadius.circular(16),
                   child: Listener(
                     onPointerDown: (event) {
-                      // Logic: Only start a stroke if it's a stylus or high-pressure touch
                       if (event.kind == PointerDeviceKind.stylus || event.pressure > 0) {
                         setState(() {
                           _strokes.add([StrokePoint(event.localPosition, event.pressure)]);

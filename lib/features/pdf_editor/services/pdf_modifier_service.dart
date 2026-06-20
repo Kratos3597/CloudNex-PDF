@@ -54,7 +54,7 @@ class PdfModifierService {
     try {
       document = PdfDocument(inputBytes: bytes, password: password);
 
-      final bool isEncrypted = false; 
+      const bool isEncrypted = false; 
 
       final int totalPages = document.pages.count;
 
