@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -437,13 +438,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     if (viewerBox == null) return;
     
     final Offset localViewportPos = viewerBox.globalToLocal(screenPos);
-    
-    final Rect pageRect = Rect.fromLTWH(
-      localViewportPos.dx,
-      localViewportPos.dy,
-      size.width,
-      size.height
-    );
+    final Rect pageRect = Rect.fromLTWH(localViewportPos.dx, localViewportPos.dy, size.width, size.height);
     
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     
