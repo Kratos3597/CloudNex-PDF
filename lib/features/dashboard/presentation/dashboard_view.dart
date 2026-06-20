@@ -171,7 +171,7 @@ class DashboardView extends ConsumerWidget {
       final savePath = await PdfService.saveDocument(mergedBytes, record.fileName);
       record.filePath = savePath;
 
-      await ref.read(isarServiceProvider).saveDocument(record);
+      await ref.read(databaseProvider).saveDocument(record);
       ref.invalidate(documentListProvider);
       
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Documents merged successfully")));
@@ -193,7 +193,7 @@ class DashboardView extends ConsumerWidget {
         ..fileName = result.files.single.name
         ..lastOpenedDate = DateTime.now();
 
-      await ref.read(isarServiceProvider).saveDocument(record);
+      await ref.read(databaseProvider).saveDocument(record);
       ref.invalidate(documentListProvider);
     }
   }

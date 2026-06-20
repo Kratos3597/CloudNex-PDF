@@ -25,6 +25,7 @@ import 'dex_desktop_ribbon.dart';
 import 'annotation_manager_view.dart';
 import 'interactive_shadow_layer.dart';
 import '../domain/models/shadow_object.dart';
+import 'native_pdf_bridge.dart';
 
 class PdfWorkspaceView extends StatefulWidget {
   final PdfStateController stateController;
@@ -49,6 +50,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
   bool _isNeuralActive = false;
   bool _isDrawingInk = false;
   bool _isMagnifierActive = false;
+  bool _useSamsungNativeRendering = false;
 
   @override
   Widget build(BuildContext context) {
@@ -91,25 +93,28 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
                   Expanded(
                     child: Stack(
                       children: [
-                        SfPdfViewer.memory(
-                          byteStream,
-                          key: _pdfViewerKey,
-                          controller: session.pdfViewerController,
-                          initialPageNumber: session.activePageNumber,
-                          pageLayoutMode: PdfPageLayoutMode.continuous,
-                          scrollDirection: PdfScrollDirection.vertical,
-                          interactionMode: (widget.stateController.currentTool == ActivePdfTool.none || widget.stateController.currentTool == ActivePdfTool.select)
-                                  ? PdfInteractionMode.pan 
-                                  : PdfInteractionMode.selection,
-                          onTap: _handleCanvasTapIntercept,
-                          onPageChanged: (details) => widget.stateController.updatePageNumber(details.newPageNumber),
-                          onTextSelectionChanged: _handleTextSelection,
-                          onDocumentLoaded: (details) {
-                            setState(() {
-                              _bookmarks = details.document.bookmarks;
-                            });
-                          },
-                        ),
+                        if (_useSamsungNativeRendering && session.filePath != null)
+                          NativePdfBridge(filePath: session.filePath!)
+                        else
+                          SfPdfViewer.memory(
+                            byteStream,
+                            key: _pdfViewerKey,
+                            controller: session.pdfViewerController,
+                            initialPageNumber: session.activePageNumber,
+                            pageLayoutMode: PdfPageLayoutMode.continuous,
+                            scrollDirection: PdfScrollDirection.vertical,
+                            interactionMode: (widget.stateController.currentTool == ActivePdfTool.none || widget.stateController.currentTool == ActivePdfTool.select)
+                                    ? PdfInteractionMode.pan 
+                                    : PdfInteractionMode.selection,
+                            onTap: _handleCanvasTapIntercept,
+                            onPageChanged: (details) => widget.stateController.updatePageNumber(details.newPageNumber),
+                            onTextSelectionChanged: _handleTextSelection,
+                            onDocumentLoaded: (details) {
+                              setState(() {
+                                _bookmarks = details.document.bookmarks;
+                              });
+                            },
+                          ),
                         InteractiveShadowLayer(
                           stateController: widget.stateController,
                           pdfViewerController: session.pdfViewerController,
@@ -274,6 +279,20 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
+          _DockButton(
+            icon: _useSamsungNativeRendering ? Icons.bolt_rounded : Icons.flash_off_rounded,
+            label: "Turbo",
+            onPressed: () {
+              setState(() => _useSamsungNativeRendering = !_useSamsungNativeRendering);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(_useSamsungNativeRendering ? "Samsung Turbo Mode Enabled" : "Turbo Mode Disabled"),
+                  duration: const Duration(seconds: 1),
+                ),
+              );
+            },
+            isActive: _useSamsungNativeRendering,
+          ),
           _DockButton(icon: Icons.border_color_rounded, label: "Annotate", 
             onPressed: _showAnnotationOptions,
             isActive: widget.stateController.currentTool == ActivePdfTool.highlight),

@@ -4,6 +4,7 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../domain/models/shadow_object.dart';
 import '../controller/pdf_state_controller.dart';
 import '../../../core/theme/pdf_pro_theme.dart';
+import '../../../services/neural_engine/dom_models.dart';
 
 class InteractiveShadowLayer extends StatelessWidget {
   final PdfStateController stateController;
@@ -20,19 +21,42 @@ class InteractiveShadowLayer extends StatelessWidget {
     final session = stateController.activeSession;
     if (session == null) return const SizedBox.shrink();
 
-    return Stack(
-      children: session.shadowObjects.map((obj) {
-        // Only show objects for the current page
-        if (obj.pageIndex != session.activePageNumber - 1) return const SizedBox.shrink();
+    final activePage = session.activePageNumber - 1;
+    final dom = session.pageDoms[activePage];
 
-        return ShadowObjectWidget(
-          object: obj,
-          isSelected: stateController.selectedShadowObjectId == obj.id,
-          onTap: () => stateController.selectShadowObject(obj.id),
-          onUpdate: (newObj) => stateController.updateShadowObject(newObj),
-          onDelete: () => stateController.removeShadowObject(obj.id),
-        );
-      }).toList(),
+    return Stack(
+      children: [
+        // 1. NEURAL HIGHLIGHTS (DOM-based)
+        if (dom != null)
+          ...dom.elements.map((el) => _buildNeuralBlock(el)),
+
+        // 2. USER SHADOW OBJECTS (Manual edits)
+        ...session.shadowObjects.where((obj) => obj.pageIndex == activePage).map((obj) {
+          return ShadowObjectWidget(
+            object: obj,
+            isSelected: stateController.selectedShadowObjectId == obj.id,
+            onTap: () => stateController.selectShadowObject(obj.id),
+            onUpdate: (newObj) => stateController.updateShadowObject(newObj),
+            onDelete: () => stateController.removeShadowObject(obj.id),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildNeuralBlock(DomElement el) {
+    return Positioned(
+      left: el.left,
+      top: el.top,
+      child: Container(
+        width: el.width,
+        height: el.height,
+        decoration: BoxDecoration(
+          color: PdfProTheme.primaryBlue.withOpacity(0.05),
+          border: Border.all(color: PdfProTheme.primaryBlue.withOpacity(0.1), width: 0.5),
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
     );
   }
 }

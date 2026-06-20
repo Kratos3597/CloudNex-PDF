@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../services/storage/isar_service.dart';
+import '../../services/storage/cloudnex_database.dart';
 import '../../features/library/domain/models/document_record.dart';
 
-final isarServiceProvider = Provider<IsarService>((ref) {
-  return IsarService();
+final databaseProvider = Provider<CloudNexDatabase>((ref) {
+  return CloudNexDatabase();
 });
 
 final documentListProvider = FutureProvider<List<DocumentRecord>>((ref) async {
-  final service = ref.watch(isarServiceProvider);
-  return service.getAllDocuments();
+  final db = ref.watch(databaseProvider);
+  return db.getAllDocuments();
 });

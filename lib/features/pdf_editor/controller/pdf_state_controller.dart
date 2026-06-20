@@ -5,8 +5,10 @@ import 'package:syncfusion_flutter_pdf/pdf.dart' as sf;
 import '../services/pdf_cache_service.dart';
 import '../services/pdf_modifier_service.dart';
 import 'package:cloudnex_pdf_reader/features/analytics/services/analytics_service.dart';
-import 'package:cloudnex_pdf_reader/services/storage/isar_service.dart';
 import '../domain/models/shadow_object.dart';
+import '../../../services/ai/cnne_service.dart';
+import '../../../services/storage/cloudnex_database.dart';
+import '../../../services/neural_engine/dom_models.dart';
 
 enum ActivePdfTool { none, highlight, underline, strikeout, ink, rectangle, circle, signaturePlacement, textPlacement, select }
 
@@ -22,6 +24,9 @@ class PdfSession {
   int activePageNumber = 1;
   String? password;
   PdfSecurityReport? securityReport;
+
+  // AI DOM Cache
+  final Map<int, DocumentPageDom> pageDoms = {};
 
   // SHADOW LAYER: Live interactive objects that are not yet burned into the PDF
   final List<ShadowObject> shadowObjects = [];
@@ -59,6 +64,16 @@ class PdfStateController extends ChangeNotifier {
   Uint8List? _activeSignatureGraphicBytes;
   String? _selectedShadowObjectId;
 
+  // Unified Database Service
+  final CloudNexDatabase db = CloudNexDatabase();
+
+  // CNNE AI Service
+  late final CnneService ai;
+
+  PdfStateController() {
+    ai = CnneService(db);
+  }
+
   List<PdfSession> get sessions => _sessions;
   int get activeSessionIndex => _activeSessionIndex;
   
@@ -95,8 +110,17 @@ class PdfStateController extends ChangeNotifier {
     _activeSessionIndex = _sessions.length - 1;
     _updateSecurityReport(session);
     _triggerBackgroundCacheSync(session);
+    _triggerAiAnalysis(session, initialPage - 1);
     
     analyticsService.logAction("OPEN_DOCUMENT", fileName);
+    notifyListeners();
+  }
+
+  Future<void> _triggerAiAnalysis(PdfSession session, int pageIndex) async {
+    if (session.currentBytes == null || session.pageDoms.containsKey(pageIndex)) return;
+    
+    final dom = await ai.processPage(session.id, session.currentBytes!, pageIndex);
+    session.pageDoms[pageIndex] = dom;
     notifyListeners();
   }
 
@@ -196,10 +220,11 @@ class PdfStateController extends ChangeNotifier {
     session.activePageNumber = pageNum;
     
     if (session.filePath != null) {
-      IsarService().updateLastOpenedPage(session.filePath!, pageNum);
+      db.updateLastOpenedPage(session.filePath!, pageNum);
     }
 
     _triggerBackgroundCacheSync(session);
+    _triggerAiAnalysis(session, pageNum - 1);
     notifyListeners();
   }
 
@@ -216,8 +241,10 @@ class PdfStateController extends ChangeNotifier {
     session.liveDocument = sf.PdfDocument(inputBytes: mutatedBytes, password: session.password);
 
     session.redoStack.clear();
+    session.pageDoms.clear(); // Invalidate AI cache as bytes changed
     _updateSecurityReport(session);
     _triggerBackgroundCacheSync(session);
+    _triggerAiAnalysis(session, session.activePageNumber - 1);
     
     analyticsService.logAction("MODIFY_DOCUMENT", session.fileName);
     notifyListeners();
