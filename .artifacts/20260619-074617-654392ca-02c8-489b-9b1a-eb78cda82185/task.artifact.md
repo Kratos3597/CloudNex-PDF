@@ -1,14 +1,16 @@
-# Task Management - UX & Performance Fixes
+# Task Management - S25 Ultra Feature Set
 
-- [/] Core UX & Performance Overhaul
-    - [ ] Implement **Transparent Signature Background** (Background Removal)
-    - [ ] Optimize **PDF Scroll Performance** (Fix reloading/flicker)
-    - [ ] Fix **Document Outline** connection (Burger menu)
-    - [ ] Add **Export to Word (.docx)** logic
-    - [ ] Correct **Coordinate Mapping** for text boxes
-- [ ] Production "Outer Shell"
-    - [ ] Create assets for App Icon and Splash Screen
-    - [ ] Configure `flutter_launcher_icons`
+- [/] 🖊️ Point 1: S Pen Integration
+    - [ ] Update `SignaturePadView` for Pressure-Sensitive Hand-writing
+    - [ ] Add "Stylus Only" mode with Palm Rejection
+- [ ] 🧠 Point 2: NPU-Optimized Neural Engine
+    - [ ] Refactor Vision logic into high-performance Isolate pipeline
+- [ ] 🖥️ Point 3: Samsung DeX "Desktop mode" UI
+    - [ ] Implement Ribbon Menu for large screens / DeX
+- [ ] 🚀 Point 4: 120Hz & High-RAM Performance
+    - [ ] Tune Render Engine and Cache settings for S25 Ultra
+- [ ] 💎 Point 5: "Ultra" Glass & Status Capsule
+    - [ ] Implement Dynamic Status Capsule (Top UI)
 - [ ] Final Build & Deployment
-    - [ ] Generate production-ready APK
-    - [ ] Push final source to GitHub
+    - [ ] Push to GitHub
+    - [ ] Generate Ultra-Debug APK
