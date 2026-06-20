@@ -5,12 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3b6dc0e0-037a-4e5e-86a1-6da39bcbd08e" name="Changes" comment="new studio">
-      <change afterPath="$PROJECT_DIR$/lib/services/image_processing_service.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/services/word_export_service.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.artifacts/20260619-074617-654392ca-02c8-489b-9b1a-eb78cda82185/task.artifact.md" beforeDir="false" afterPath="$PROJECT_DIR$/.artifacts/20260619-074617-654392ca-02c8-489b-9b1a-eb78cda82185/task.artifact.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/ink_drawing_overlay.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/page_manager_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/page_manager_view.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/pdf_workspace_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/presentation/pdf_workspace_view.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/features/profile/presentation/signature_vault_view.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/profile/presentation/signature_vault_view.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/pdf_editor/services/pdf_modifier_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/pdf_editor/services/pdf_modifier_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/pdf_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/pdf_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/word_export_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/word_export_service.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

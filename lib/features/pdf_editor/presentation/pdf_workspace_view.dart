@@ -18,6 +18,7 @@ import 'interactive_text_overlay.dart';
 import 'neural_live_editor.dart';
 import '../../../services/neural_engine/neural_vision_engine.dart';
 import '../../../services/word_export_service.dart';
+import 'ink_drawing_overlay.dart';
 
 class PdfWorkspaceView extends StatefulWidget {
   final PdfStateController stateController;
@@ -40,6 +41,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
   bool _isPlacingText = false;
   NeuralZone? _activeNeuralZone;
   bool _isNeuralActive = false;
+  bool _isDrawingInk = false;
 
   @override
   Widget build(BuildContext context) {
@@ -70,10 +72,9 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
                   Expanded(
                     child: SfPdfViewer.memory(
                       byteStream,
-                      key: ValueKey("${session.id}_${byteStream.hashCode}"),
+                      key: _pdfViewerKey,
                       controller: session.pdfViewerController,
                       initialPageNumber: session.activePageNumber,
-                      // PERFORMANCE OPTIMIZATION: Enable virtualization and caching
                       pageLayoutMode: PdfPageLayoutMode.continuous,
                       scrollDirection: PdfScrollDirection.vertical,
                       interactionMode: widget.stateController.currentTool == ActivePdfTool.none 
@@ -113,6 +114,11 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
                   zone: _activeNeuralZone!,
                   onCancel: () => setState(() => _isNeuralActive = false),
                   onConfirm: (text, size) => _burnNeuralEdit(text, size),
+                ),
+              if (_isDrawingInk)
+                InkDrawingOverlay(
+                  onCancel: () => setState(() => _isDrawingInk = false),
+                  onConfirm: (paths, width, color) => _burnInkToPdf(paths, width, color),
                 ),
             ],
           );
@@ -274,6 +280,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
             ListTile(leading: const Icon(Icons.highlight_rounded, color: Colors.amber), title: const Text('Highlight'), onTap: () { Navigator.pop(context); _applyAnnotation(sf.PdfTextMarkupAnnotationType.highlight); }),
             ListTile(leading: const Icon(Icons.format_underlined_rounded), title: const Text('Underline'), onTap: () { Navigator.pop(context); _applyAnnotation(sf.PdfTextMarkupAnnotationType.underline); }),
             ListTile(leading: const Icon(Icons.strikethrough_s_rounded), title: const Text('Strikeout'), onTap: () { Navigator.pop(context); _applyAnnotation(sf.PdfTextMarkupAnnotationType.strikethrough); }),
+            ListTile(leading: const Icon(Icons.gesture_rounded, color: PdfProTheme.primaryBlue), title: const Text('Freehand Pen'), onTap: () { Navigator.pop(context); setState(() => _isDrawingInk = true); }),
             const Divider(),
             ListTile(leading: const Icon(Icons.rectangle_outlined), title: const Text('Rectangle'), onTap: () { Navigator.pop(context); setState(() { _activeShapeType = ShapeType.rectangle; _isPlacingShape = true; }); }),
             ListTile(leading: const Icon(Icons.circle_outlined), title: const Text('Circle'), onTap: () { Navigator.pop(context); setState(() { _activeShapeType = ShapeType.circle; _isPlacingShape = true; }); }),
@@ -377,8 +384,29 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
   }
 
   Future<void> _burnSignatureToPdf(Offset screenPos, Size size) async {
+    final session = widget.stateController.activeSession;
+    if (session == null) return;
+    
     final pageIndex = widget.stateController.activePageNumber - 1;
     final currentBytes = widget.stateController.currentBytes!;
+    
+    // PRECISION CALIBRATION: Use individual point conversion for accuracy
+    final RenderBox? viewerBox = _pdfViewerKey.currentContext?.findRenderObject() as RenderBox?;
+    if (viewerBox == null) return;
+    
+    final Offset localViewportPos = viewerBox.globalToLocal(screenPos);
+    
+    final Offset topLeft = session.pdfViewerController.convertViewportToPage(
+      pageIndex + 1, 
+      localViewportPos,
+    );
+    
+    final Offset bottomRight = session.pdfViewerController.convertViewportToPage(
+      pageIndex + 1,
+      localViewportPos.translate(size.width, size.height),
+    );
+    
+    final Rect pageRect = Rect.fromPoints(topLeft, bottomRight);
     
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     
@@ -386,8 +414,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
       originalBytes: currentBytes,
       targetPageZeroIndexed: pageIndex,
       signatureImageBytes: _pendingSignature!,
-      coordinateX: screenPos.dx,
-      coordinateY: screenPos.dy,
+      bounds: pageRect,
       password: widget.stateController.activeDocumentPassword,
     );
 
@@ -399,15 +426,35 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
   }
 
   Future<void> _burnShapeToPdf(Offset screenPos, Size size) async {
+    final session = widget.stateController.activeSession;
+    if (session == null) return;
+
     final pageIndex = widget.stateController.activePageNumber - 1;
     final currentBytes = widget.stateController.currentBytes!;
+    
+    final RenderBox? viewerBox = _pdfViewerKey.currentContext?.findRenderObject() as RenderBox?;
+    if (viewerBox == null) return;
+    
+    final Offset localViewportPos = viewerBox.globalToLocal(screenPos);
+    
+    final Offset topLeft = session.pdfViewerController.convertViewportToPage(
+      pageIndex + 1, 
+      localViewportPos,
+    );
+    
+    final Offset bottomRight = session.pdfViewerController.convertViewportToPage(
+      pageIndex + 1,
+      localViewportPos.translate(size.width, size.height),
+    );
+    
+    final Rect pageRect = Rect.fromPoints(topLeft, bottomRight);
     
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     
     final updatedBytes = await PdfService.addShapeAnnotation(
       bytes: currentBytes,
       pageIndex: pageIndex,
-      bounds: Rect.fromLTWH(screenPos.dx, screenPos.dy, size.width, size.height),
+      bounds: pageRect,
       shapeType: _activeShapeType!.name.toUpperCase(),
     );
 
@@ -419,7 +466,8 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
   }
 
   Future<void> _burnTextToPdf(String text, Offset screenPos, Size size, double fontSize, Color color) async {
-    if (text.isEmpty) {
+    final session = widget.stateController.activeSession;
+    if (session == null || text.isEmpty) {
       setState(() => _isPlacingText = false);
       return;
     }
@@ -427,12 +475,29 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     final pageIndex = widget.stateController.activePageNumber - 1;
     final currentBytes = widget.stateController.currentBytes!;
     
+    final RenderBox? viewerBox = _pdfViewerKey.currentContext?.findRenderObject() as RenderBox?;
+    if (viewerBox == null) return;
+    
+    final Offset localViewportPos = viewerBox.globalToLocal(screenPos);
+    
+    final Offset topLeft = session.pdfViewerController.convertViewportToPage(
+      pageIndex + 1, 
+      localViewportPos,
+    );
+    
+    final Offset bottomRight = session.pdfViewerController.convertViewportToPage(
+      pageIndex + 1,
+      localViewportPos.translate(size.width, size.height),
+    );
+    
+    final Rect pageRect = Rect.fromPoints(topLeft, bottomRight);
+    
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     
     final updatedBytes = await PdfService.addFreeTextAnnotation(
       bytes: currentBytes,
       pageIndex: pageIndex,
-      bounds: Rect.fromLTWH(screenPos.dx, screenPos.dy, size.width, size.height),
+      bounds: pageRect,
       text: text,
       fontSize: fontSize,
       textColor: sf.PdfColor(color.red, color.green, color.blue),
@@ -443,6 +508,32 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     
     widget.stateController.commitMutation(updatedBytes);
     setState(() => _isPlacingText = false);
+  }
+
+  Future<void> _burnInkToPdf(List<List<Offset>> paths, double width, Color color) async {
+    if (paths.isEmpty) {
+      setState(() => _isDrawingInk = false);
+      return;
+    }
+
+    final pageIndex = widget.stateController.activePageNumber - 1;
+    final currentBytes = widget.stateController.currentBytes!;
+    
+    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+    
+    final updatedBytes = await PdfService.addInkAnnotation(
+      bytes: currentBytes,
+      pageIndex: pageIndex,
+      paths: paths,
+      strokeWidth: width,
+      color: sf.PdfColor(color.red, color.green, color.blue),
+    );
+
+    if (!mounted) return;
+    Navigator.pop(context);
+    
+    widget.stateController.commitMutation(updatedBytes);
+    setState(() => _isDrawingInk = false);
   }
 
   void _handleCanvasTapIntercept(PdfGestureDetails details) async {
@@ -526,7 +617,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     widget.stateController.commitMutation(updatedBytes);
   }
 
-  Future<void> _handlePageDeletion() async {
+  Future<void> _handlePageDeletion(int index) async {
     final currentBytes = widget.stateController.currentBytes;
     if (currentBytes == null) return;
 
@@ -534,7 +625,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Delete Page?"),
-        content: Text("Are you sure you want to delete page ${widget.stateController.activePageNumber}?"),
+        content: Text("Are you sure you want to delete page ${index + 1}?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Delete", style: TextStyle(color: Colors.red))),
@@ -544,7 +635,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
 
     if (confirm == true) {
       showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
-      final updatedBytes = await PdfService.deletePages(currentBytes, [widget.stateController.activePageNumber - 1]);
+      final updatedBytes = await PdfService.deletePages(currentBytes, [index]);
       if (!mounted) return;
       Navigator.pop(context);
       widget.stateController.commitMutation(updatedBytes);
@@ -621,30 +712,33 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     
     try {
-      String content = "";
+      Uint8List fileData;
       String ext = "";
       
       if (format == 'EXCEL') {
-        content = PdfService.exportToCsv(currentBytes);
+        final content = PdfService.exportToCsv(currentBytes);
+        fileData = Uint8List.fromList(content.codeUnits);
         ext = "csv";
       } else if (format == 'WORD') {
-        content = WordExportService.convertToWordTranscript(currentBytes);
+        fileData = WordExportService.convertToWordDocx(currentBytes);
         ext = "docx";
       } else {
-        content = PdfService.extractText(currentBytes);
+        final content = PdfService.extractText(currentBytes);
+        fileData = Uint8List.fromList(content.codeUnits);
         ext = "txt";
       }
       
+      if (!mounted) return;
       Navigator.pop(context);
 
-      final success = await PdfModifierService.saveTextDataViaPicker(
-        text: content, 
+      final success = await PdfModifierService.saveDocumentViaSystemPicker(
+        bytes: fileData, 
         suggestedName: "Export.$ext",
       );
       
       if (success) analyticsService.logAction("EXPORT_$format", session.fileName);
     } catch (e) {
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Export failed: $e")));
     }
   }

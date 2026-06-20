@@ -64,7 +64,8 @@ class _PageManagerViewState extends State<PageManagerView> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : GridView.builder(
+          : ReorderableRawView(
+              onReorder: _handleReorder,
               padding: const EdgeInsets.all(16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
@@ -74,49 +75,138 @@ class _PageManagerViewState extends State<PageManagerView> {
               ),
               itemCount: _pagePreviews?.length ?? 0,
               itemBuilder: (context, index) {
-                return Column(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(4),
+                return ReorderableDelayedDragStartListener(
+                  key: ValueKey('page_$index'),
+                  index: index,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Image.memory(_pagePreviews![index], fit: BoxFit.contain),
                         ),
-                        child: Image.memory(_pagePreviews![index], fit: BoxFit.contain),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Page ${index + 1}", style: const TextStyle(fontSize: 10)),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 16, color: PdfProTheme.errorRed),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () => _deletePage(index),
-                        ),
-                      ],
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text("${index + 1}", style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, size: 16, color: PdfProTheme.errorRed),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () => _deletePage(index),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
     );
   }
 
-  Future<void> _deletePage(int index) async {
+  void _handleReorder(int oldIndex, int newIndex) async {
+    if (newIndex > oldIndex) newIndex -= 1;
+    if (oldIndex == newIndex) return;
+
     final currentBytes = widget.stateController.currentBytes;
     if (currentBytes == null) return;
 
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     
-    final updatedBytes = await PdfService.deletePages(currentBytes, [index]);
+    final updatedBytes = await PdfService.reorderPages(currentBytes, oldIndex, newIndex);
     
     if (!mounted) return;
     Navigator.pop(context);
     
     widget.stateController.commitMutation(updatedBytes);
-    _generatePreviews(); // Refresh
+    _generatePreviews(); 
+  }
+
+  Future<void> _deletePage(int index) async {
+    final currentBytes = widget.stateController.currentBytes;
+    if (currentBytes == null) return;
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Page?"),
+        content: Text("Delete page ${index + 1}?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Delete", style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+      final updatedBytes = await PdfService.deletePages(currentBytes, [index]);
+      if (!mounted) return;
+      Navigator.pop(context);
+      widget.stateController.commitMutation(updatedBytes);
+      _generatePreviews();
+    }
+  }
+}
+
+class ReorderableRawView extends StatelessWidget {
+  final int itemCount;
+  final Widget Function(BuildContext, int) itemBuilder;
+  final void Function(int, int) onReorder;
+  final SliverGridDelegate gridDelegate;
+  final EdgeInsets padding;
+
+  const ReorderableRawView({
+    super.key,
+    required this.itemCount,
+    required this.itemBuilder,
+    required this.onReorder,
+    required this.gridDelegate,
+    this.padding = EdgeInsets.zero,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ReorderableGridView.extent(
+      maxCrossAxisExtent: 150,
+      onReorder: onReorder,
+      padding: padding,
+      children: List.generate(itemCount, (index) => itemBuilder(context, index)),
+    );
+  }
+}
+
+class ReorderableGridView extends StatelessWidget {
+  final List<Widget> children;
+  final void Function(int, int) onReorder;
+  final double maxCrossAxisExtent;
+  final EdgeInsets padding;
+
+  const ReorderableGridView.extent({
+    super.key,
+    required this.children,
+    required this.onReorder,
+    required this.maxCrossAxisExtent,
+    required this.padding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // For this tier, we'll use a standard ReorderableListView-like approach for simplicity
+    // in the grid or a third party package like reorderable_grid.
+    // For now, let's use a CustomScrollView with a ReorderableSliverGrid if available, 
+    // or simulate with a basic reorderable list for the prototype.
+    
+    return ReorderableListView(
+      padding: padding,
+      onReorder: onReorder,
+      children: children,
+    );
   }
 }

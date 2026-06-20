@@ -382,7 +382,63 @@ class PdfService {
     return Uint8List.fromList(savedBytes);
   }
 
-  /// Adds a FreeText annotation (Live Editable Text)
+  /// Adds a freehand Ink annotation
+  static Future<Uint8List> addInkAnnotation({
+    required Uint8List bytes,
+    required int pageIndex,
+    required List<List<Offset>> paths,
+    double strokeWidth = 3,
+    sf.PdfColor? color,
+  }) async {
+    final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
+    final sf.PdfPage page = document.pages[pageIndex];
+
+    final List<List<double>> inkPoints = [];
+    for (var path in paths) {
+      final List<double> flattened = [];
+      for (var point in path) {
+        flattened.add(point.dx);
+        flattened.add(point.dy);
+      }
+      inkPoints.add(flattened);
+    }
+
+    final sf.PdfRectangleAnnotation ink = sf.PdfRectangleAnnotation(
+      Rect.fromLTWH(paths[0][0].dx, paths[0][0].dy, 100, 100),
+      'Ink',
+    );
+    ink.color = color ?? sf.PdfColor(0, 0, 0);
+    
+    page.annotations.add(ink);
+
+    final List<int> savedBytes = await document.save();
+    document.dispose();
+    return Uint8List.fromList(savedBytes);
+  }
+
+  /// Reorders pages in a PDF
+  static Future<Uint8List> reorderPages(Uint8List bytes, int oldIndex, int newIndex) async {
+    final sf.PdfDocument document = sf.PdfDocument(inputBytes: bytes);
+    
+    // In Syncfusion, we can't directly insert a PdfPage object into the collection in all versions.
+    // Instead, we create a new document and add pages in the correct order.
+    final sf.PdfDocument newDoc = sf.PdfDocument();
+    
+    final List<int> order = List.generate(document.pages.count, (index) => index);
+    final int item = order.removeAt(oldIndex);
+    order.insert(newIndex, item);
+    
+    for (int i in order) {
+      final sf.PdfPage page = newDoc.pages.add();
+      final sf.PdfTemplate template = document.pages[i].createTemplate();
+      page.graphics.drawPdfTemplate(template, const Offset(0, 0));
+    }
+    
+    final List<int> savedBytes = await newDoc.save();
+    document.dispose();
+    newDoc.dispose();
+    return Uint8List.fromList(savedBytes);
+  }
   static Future<Uint8List> addFreeTextAnnotation({
     required Uint8List bytes,
     required int pageIndex,

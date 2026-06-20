@@ -87,16 +87,14 @@ class PdfModifierService {
     required Uint8List originalBytes,
     required int targetPageZeroIndexed,
     required Uint8List signatureImageBytes,
-    required double coordinateX,
-    required double coordinateY,
+    required Rect bounds,
     String? password,
   }) async {
     return await Isolate.run(() => _executeHeavyCompilation(
       originalBytes,
       targetPageZeroIndexed,
       signatureImageBytes,
-      coordinateX,
-      coordinateY,
+      bounds,
       password,
     ));
   }
@@ -105,8 +103,7 @@ class PdfModifierService {
       Uint8List bytes,
       int page,
       Uint8List sig,
-      double x,
-      double y,
+      Rect bounds,
       String? password,
       ) {
     PdfDocument? doc;
@@ -119,11 +116,10 @@ class PdfModifierService {
 
       final PdfPage pdfPage = doc.pages[page];
       
-      // Syncfusion PDF coordinate system starts from top-left.
-      // Offset by half of the signature size to center it on the tap
+      // Use the provided bounds directly (already converted to PDF points)
       pdfPage.graphics.drawImage(
         PdfBitmap(sig),
-        fm.Rect.fromLTWH(x - 65, y - 32.5, 130, 65),
+        bounds,
       );
 
       final List<int> saved = doc.saveSync();
