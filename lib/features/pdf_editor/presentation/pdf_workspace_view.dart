@@ -23,10 +23,12 @@ import '../../../services/word_export_service.dart';
 import 'ink_drawing_overlay.dart';
 import 'dex_desktop_ribbon.dart';
 import 'annotation_manager_view.dart';
+import 'interactive_shadow_layer.dart';
+import '../domain/models/shadow_object.dart';
 
 class PdfWorkspaceView extends StatefulWidget {
   final PdfStateController stateController;
-  const PdfWorkspaceView({super.key, required this.stateController});
+  const PdfWorkspaceView({super.key});
 
   @override
   State<PdfWorkspaceView> createState() => _PdfWorkspaceViewState();
@@ -87,23 +89,36 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
                   _buildTabBar(),
                   if (_isSearching) _buildSearchBar(session),
                   Expanded(
-                    child: SfPdfViewer.memory(
-                      byteStream,
-                      key: _pdfViewerKey,
-                      controller: session.pdfViewerController,
-                      initialPageNumber: session.activePageNumber,
-                      pageLayoutMode: PdfPageLayoutMode.continuous,
-                      scrollDirection: PdfScrollDirection.vertical,
-                      interactionMode: widget.stateController.currentTool == ActivePdfTool.none 
-                          ? PdfInteractionMode.pan : PdfInteractionMode.selection,
-                      onTap: _handleCanvasTapIntercept,
-                      onPageChanged: (details) => widget.stateController.updatePageNumber(details.newPageNumber),
-                      onTextSelectionChanged: _handleTextSelection,
-                      onDocumentLoaded: (details) {
-                        setState(() {
-                          _bookmarks = details.document.bookmarks;
-                        });
-                      },
+                    child: Stack(
+                      children: [
+                        SfPdfViewer.memory(
+                          byteStream,
+                          key: _pdfViewerKey,
+                          controller: session.pdfViewerController,
+                          initialPageNumber: session.activePageNumber,
+                          pageLayoutMode: PdfPageLayoutMode.continuous,
+                          scrollDirection: PdfScrollDirection.vertical,
+                          // OPTIMIZATION: Hardware-accelerated interaction
+                          interactionMode: _isMagnifierActive 
+                              ? PdfInteractionMode.magnifier 
+                              : (widget.stateController.currentTool == ActivePdfTool.none || widget.stateController.currentTool == ActivePdfTool.select
+                                  ? PdfInteractionMode.pan 
+                                  : PdfInteractionMode.selection),
+                          onTap: _handleCanvasTapIntercept,
+                          onPageChanged: (details) => widget.stateController.updatePageNumber(details.newPageNumber),
+                          onTextSelectionChanged: _handleTextSelection,
+                          onDocumentLoaded: (details) {
+                            setState(() {
+                              _bookmarks = details.document.bookmarks;
+                            });
+                          },
+                        ),
+                        // SHADOW LAYER: Live interactive widgets
+                        InteractiveShadowLayer(
+                          stateController: widget.stateController,
+                          pdfViewerController: session.pdfViewerController,
+                        ),
+                      ],
                     ),
                   ),
                   if (!isDesktopMode) _buildToolDock(),
@@ -113,18 +128,18 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
                 InteractiveSignatureOverlay(
                   imageBytes: _pendingSignature!,
                   onCancel: () => setState(() => _isPlacingSignature = false),
-                  onConfirm: (pos, size) => _burnSignatureToPdf(pos, size),
+                  onConfirm: (pos, size) => _addShadowSignature(pos, size),
                 ),
               if (_isPlacingText)
                 InteractiveTextOverlay(
                   onCancel: () => setState(() => _isPlacingText = false),
-                  onConfirm: (text, pos, size, fontSize, color) => _burnTextToPdf(text, pos, size, fontSize, color),
+                  onConfirm: (text, pos, size, fontSize, color) => _addShadowText(text, pos, size, fontSize, color),
                 ),
               if (_isPlacingShape && _activeShapeType != null)
                 InteractiveShapeOverlay(
                   type: _activeShapeType!,
                   onCancel: () => setState(() => _isPlacingShape = false),
-                  onConfirm: (pos, size) => _burnShapeToPdf(pos, size),
+                  onConfirm: (pos, size) => _addShadowShape(pos, size),
                 ),
               if (_isNeuralActive && _activeNeuralZone != null)
                 NeuralLiveEditor(
@@ -140,10 +155,8 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
               AnnotationManagerOverlay(
                 controller: session.pdfViewerController,
                 onAddComment: _handleAddComment,
-                onFlatten: _handleFlatten,
+                onFlatten: _handleFlattenAndBurn,
               ),
-              if (_isMagnifierActive)
-                _buildMagnifierLens(),
             ],
           );
         },
@@ -151,22 +164,93 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     );
   }
 
-  Widget _buildMagnifierLens() {
-    return Positioned(
-      top: 100,
-      left: 100,
-      child: Container(
-        width: 150,
-        height: 150,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: PdfProTheme.primaryBlue, width: 3),
-          boxShadow: [const BoxShadow(color: Colors.black26, blurRadius: 10)],
-          color: Colors.white,
-        ),
-        child: const Center(child: Icon(Icons.zoom_in_rounded, size: 40, color: PdfProTheme.primaryBlue)),
-      ),
-    );
+  void _addShadowSignature(Offset pos, Size size) {
+    widget.stateController.addShadowObject(ShadowObject(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      type: ShadowObjectType.signature,
+      position: pos,
+      size: size,
+      content: String.fromCharCodes(_pendingSignature!), // Simulating bytes as content for prototype
+      pageIndex: widget.stateController.activePageNumber - 1,
+    ));
+    setState(() => _isPlacingSignature = false);
+  }
+
+  void _addShadowText(String text, Offset pos, Size size, double fontSize, Color color) {
+    widget.stateController.addShadowObject(ShadowObject(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      type: ShadowObjectType.text,
+      position: pos,
+      size: size,
+      content: text,
+      fontSize: fontSize,
+      color: color,
+      pageIndex: widget.stateController.activePageNumber - 1,
+    ));
+    setState(() => _isPlacingText = false);
+  }
+
+  void _addShadowShape(Offset pos, Size size) {
+    widget.stateController.addShadowObject(ShadowObject(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      type: ShadowObjectType.shape,
+      position: pos,
+      size: size,
+      content: _activeShapeType!.name.toUpperCase(),
+      pageIndex: widget.stateController.activePageNumber - 1,
+    ));
+    setState(() => _isPlacingShape = false);
+  }
+
+  Future<void> _handleFlattenAndBurn() async {
+    final session = widget.stateController.activeSession;
+    if (session == null || session.shadowObjects.isEmpty) return;
+
+    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+
+    try {
+      Uint8List currentBytes = session.currentBytes!;
+      
+      // Iterate through all shadow objects and burn them into the binary
+      for (var obj in session.shadowObjects) {
+        if (obj.type == ShadowObjectType.text) {
+          currentBytes = await PdfService.addFreeTextAnnotation(
+            bytes: currentBytes,
+            pageIndex: obj.pageIndex,
+            bounds: Rect.fromLTWH(obj.position.dx, obj.position.dy, obj.size.width, obj.size.height),
+            text: obj.content,
+            fontSize: obj.fontSize,
+            textColor: sf.PdfColor(obj.color.red, obj.color.green, obj.color.blue),
+          );
+        } else if (obj.type == ShadowObjectType.signature) {
+          currentBytes = await PdfModifierService.injectGraphicSignatureAsync(
+            originalBytes: currentBytes,
+            targetPageZeroIndexed: obj.pageIndex,
+            signatureImageBytes: Uint8List.fromList(obj.content.codeUnits),
+            bounds: Rect.fromLTWH(obj.position.dx, obj.position.dy, obj.size.width, obj.size.height),
+          );
+        } else if (obj.type == ShadowObjectType.shape) {
+          currentBytes = await PdfService.addShapeAnnotation(
+            bytes: currentBytes,
+            pageIndex: obj.pageIndex,
+            bounds: Rect.fromLTWH(obj.position.dx, obj.position.dy, obj.size.width, obj.size.height),
+            shapeType: obj.content,
+          );
+        }
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context);
+      
+      widget.stateController.commitMutation(currentBytes);
+      session.shadowObjects.clear();
+      widget.stateController.clearActiveTool();
+      
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("CloudNex Compilation Complete: All edits flattened into PDF.")));
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Flattening failed: $e")));
+    }
   }
 
   PreferredSizeWidget _buildAppBar() {
@@ -457,69 +541,6 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     setState(() => _isPlacingSignature = false);
   }
 
-  Future<void> _burnShapeToPdf(Offset screenPos, Size size) async {
-    final session = widget.stateController.activeSession;
-    if (session == null) return;
-
-    final pageIndex = widget.stateController.activePageNumber - 1;
-    final currentBytes = widget.stateController.currentBytes!;
-    
-    final RenderBox? viewerBox = _pdfViewerKey.currentContext?.findRenderObject() as RenderBox?;
-    if (viewerBox == null) return;
-    
-    final Offset localViewportPos = viewerBox.globalToLocal(screenPos);
-    final Rect pageRect = Rect.fromLTWH(localViewportPos.dx, localViewportPos.dy, size.width, size.height);
-    
-    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
-    
-    final updatedBytes = await PdfService.addShapeAnnotation(
-      bytes: currentBytes,
-      pageIndex: pageIndex,
-      bounds: pageRect,
-      shapeType: _activeShapeType!.name.toUpperCase(),
-    );
-
-    if (!mounted) return;
-    Navigator.pop(context);
-    
-    widget.stateController.commitMutation(updatedBytes);
-    setState(() => _isPlacingShape = false);
-  }
-
-  Future<void> _burnTextToPdf(String text, Offset screenPos, Size size, double fontSize, Color color) async {
-    final session = widget.stateController.activeSession;
-    if (session == null || text.isEmpty) {
-      setState(() => _isPlacingText = false);
-      return;
-    }
-
-    final pageIndex = widget.stateController.activePageNumber - 1;
-    final currentBytes = widget.stateController.currentBytes!;
-    
-    final RenderBox? viewerBox = _pdfViewerKey.currentContext?.findRenderObject() as RenderBox?;
-    if (viewerBox == null) return;
-    
-    final Offset localViewportPos = viewerBox.globalToLocal(screenPos);
-    final Rect pageRect = Rect.fromLTWH(localViewportPos.dx, localViewportPos.dy, size.width, size.height);
-    
-    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
-    
-    final updatedBytes = await PdfService.addFreeTextAnnotation(
-      bytes: currentBytes,
-      pageIndex: pageIndex,
-      bounds: pageRect,
-      text: text,
-      fontSize: fontSize,
-      textColor: sf.PdfColor(color.red, color.green, color.blue),
-    );
-
-    if (!mounted) return;
-    Navigator.pop(context);
-    
-    widget.stateController.commitMutation(updatedBytes);
-    setState(() => _isPlacingText = false);
-  }
-
   Future<void> _burnInkToPdf(List<List<Offset>> paths, double width, Color color) async {
     if (paths.isEmpty) {
       setState(() => _isDrawingInk = false);
@@ -588,7 +609,6 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
 
-    // Layer 5: Binary Stream Injection (Simulated via Redact + Inject)
     Uint8List updatedBytes = await PdfService.redactArea(
       currentBytes, 
       pageIndex, 
@@ -609,18 +629,6 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
     widget.stateController.commitMutation(updatedBytes);
     widget.stateController.clearActiveTool();
     setState(() => _isNeuralActive = false);
-  }
-
-  Future<void> _handleFlatten() async {
-    final bytes = widget.stateController.currentBytes;
-    if (bytes == null) return;
-
-    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
-    final updatedBytes = await PdfService.flattenDocument(bytes);
-    if (!mounted) return;
-    Navigator.pop(context);
-    widget.stateController.commitMutation(updatedBytes);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Document Flattened: Edits are now permanent.")));
   }
 
   Future<void> _handleCompression() async {

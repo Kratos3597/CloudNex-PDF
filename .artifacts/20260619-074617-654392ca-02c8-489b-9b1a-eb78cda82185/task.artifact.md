@@ -1,16 +1,18 @@
-# Task Management - Final "Adobe Pro" Feature Set
+# Task Management - Engine Reconstruction (Shadow Layer)
 
-- [/] 🔄 Point 1: Interactive Annotation Layer
-    - [ ] Implement "Select Mode" to move/resize existing items
-- [ ] 📝 Point 2: Sticky Notes & Comments
-    - [ ] Create UI for popup speech bubbles
-- [ ] 🔒 Point 3: Professional Finishing Tools
-    - [ ] Implement Flattening (Secure merging)
-    - [ ] Implement PDF Compression (Shrink size)
-    - [ ] Implement Watermarking Tool
-- [ ] 📐 Point 4: Engineering & UX Tools
-    - [ ] Add Arrow tool & Magnifier Glass
-- [ ] 📑 Point 5: Advanced Document Intel
-    - [ ] Metadata Editor & Split View support
-- [ ] Final Build & Deployment
-    - [ ] Comprehensive "Master Build" APK
+- [/] 🏗️ Core Architecture: Shadow Layer
+    - [ ] Create `InteractiveShadowObject` model
+    - [ ] Implement `ShadowLayerOverlay` for the PDF Workspace
+    - [ ] Update `PdfStateController` to manage "In-Memory" live objects
+- [/] 🖊️ Hardware Fix: S25 Ultra Precision
+    - [ ] Fix S Pen logic: Filter by `pressure > 0` (Ignore Kind)
+    - [ ] Enable `interactionMode.magnifier` for real hardware zoom
+- [/] 📄 Export Fix: DOCX & Final PDF
+    - [ ] Implement Template-based DOCX generator (Security Headers)
+    - [ ] Create "Compilation Engine" (Burn Shadow Layer to Binary)
+- [/] ⚡ Performance: 12GB RAM Optimization
+    - [ ] Increase Cache limit to 30 pages
+    - [ ] Enable 120Hz GPU Rendering lock
+- [ ] Final Build & Verification
+    - [ ] Push source to GitHub
+    - [ ] Generate Shadow-Engine APK

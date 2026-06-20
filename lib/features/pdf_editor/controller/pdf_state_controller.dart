@@ -6,8 +6,9 @@ import '../services/pdf_cache_service.dart';
 import '../services/pdf_modifier_service.dart';
 import 'package:cloudnex_pdf_reader/features/analytics/services/analytics_service.dart';
 import 'package:cloudnex_pdf_reader/services/storage/isar_service.dart';
+import '../domain/models/shadow_object.dart';
 
-enum ActivePdfTool { none, highlight, underline, strikeout, ink, rectangle, circle, signaturePlacement, textPlacement }
+enum ActivePdfTool { none, highlight, underline, strikeout, ink, rectangle, circle, signaturePlacement, textPlacement, select }
 
 class PdfSession {
   final String id;
@@ -21,6 +22,9 @@ class PdfSession {
   int activePageNumber = 1;
   String? password;
   PdfSecurityReport? securityReport;
+
+  // SHADOW LAYER: Live interactive objects that are not yet burned into the PDF
+  final List<ShadowObject> shadowObjects = [];
 
   PdfSession({
     required this.id,
@@ -53,6 +57,7 @@ class PdfStateController extends ChangeNotifier {
 
   ActivePdfTool _currentTool = ActivePdfTool.none;
   Uint8List? _activeSignatureGraphicBytes;
+  String? _selectedShadowObjectId;
 
   List<PdfSession> get sessions => _sessions;
   int get activeSessionIndex => _activeSessionIndex;
@@ -68,10 +73,13 @@ class PdfStateController extends ChangeNotifier {
   PdfViewerController? get pdfViewerController => activeSession?.pdfViewerController;
   
   ActivePdfTool get currentTool => _currentTool;
-  bool get isViewportLocked => _currentTool != ActivePdfTool.none;
+  bool get isViewportLocked => _currentTool != ActivePdfTool.none && _currentTool != ActivePdfTool.select;
   Uint8List? get activeSignatureGraphicBytes => _activeSignatureGraphicBytes;
   String? get activeDocumentPassword => activeSession?.password;
   PdfSecurityReport? get securityReport => activeSession?.securityReport;
+
+  List<ShadowObject> get activeShadowObjects => activeSession?.shadowObjects ?? [];
+  String? get selectedShadowObjectId => _selectedShadowObjectId;
 
   void openDocument(Uint8List bytes, String fileName, {String? filePath, String? password, int initialPage = 1}) {
     final session = PdfSession(
@@ -89,6 +97,35 @@ class PdfStateController extends ChangeNotifier {
     _triggerBackgroundCacheSync(session);
     
     analyticsService.logAction("OPEN_DOCUMENT", fileName);
+    notifyListeners();
+  }
+
+  // SHADOW LAYER METHODS
+  void addShadowObject(ShadowObject obj) {
+    activeSession?.shadowObjects.add(obj);
+    _selectedShadowObjectId = obj.id;
+    notifyListeners();
+  }
+
+  void updateShadowObject(ShadowObject obj) {
+    final session = activeSession;
+    if (session == null) return;
+    final index = session.shadowObjects.indexWhere((o) => o.id == obj.id);
+    if (index != -1) {
+      session.shadowObjects[index] = obj;
+      notifyListeners();
+    }
+  }
+
+  void selectShadowObject(String? id) {
+    _selectedShadowObjectId = id;
+    if (id != null) _currentTool = ActivePdfTool.select;
+    notifyListeners();
+  }
+
+  void removeShadowObject(String id) {
+    activeSession?.shadowObjects.removeWhere((o) => o.id == id);
+    if (_selectedShadowObjectId == id) _selectedShadowObjectId = null;
     notifyListeners();
   }
 
@@ -133,7 +170,6 @@ class PdfStateController extends ChangeNotifier {
 
   void setupImagePlacement(Uint8List imageBytes) {
     _activeSignatureGraphicBytes = imageBytes;
-    // For now, mapping image placement to signature placement for the overlay
     _currentTool = ActivePdfTool.signaturePlacement;
     notifyListeners();
   }
@@ -150,6 +186,7 @@ class PdfStateController extends ChangeNotifier {
   void clearActiveTool() {
     _currentTool = ActivePdfTool.none;
     _activeSignatureGraphicBytes = null;
+    _selectedShadowObjectId = null;
     notifyListeners();
   }
 
