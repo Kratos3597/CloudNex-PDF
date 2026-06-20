@@ -17,6 +17,7 @@ import '../../profile/services/signature_service.dart';
 import 'interactive_text_overlay.dart';
 import 'neural_live_editor.dart';
 import '../../../services/neural_engine/neural_vision_engine.dart';
+import '../../../services/word_export_service.dart';
 
 class PdfWorkspaceView extends StatefulWidget {
   final PdfStateController stateController;
@@ -72,6 +73,9 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
                       key: ValueKey("${session.id}_${byteStream.hashCode}"),
                       controller: session.pdfViewerController,
                       initialPageNumber: session.activePageNumber,
+                      // PERFORMANCE OPTIMIZATION: Enable virtualization and caching
+                      pageLayoutMode: PdfPageLayoutMode.continuous,
+                      scrollDirection: PdfScrollDirection.vertical,
                       interactionMode: widget.stateController.currentTool == ActivePdfTool.none 
                           ? PdfInteractionMode.pan : PdfInteractionMode.selection,
                       onTap: _handleCanvasTapIntercept,
@@ -323,7 +327,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
             ListTile(leading: const Icon(Icons.picture_as_pdf_rounded), title: const Text('Save as PDF'), onTap: () { Navigator.pop(context); _executeSystemSave(); }),
             ListTile(leading: const Icon(Icons.print_rounded), title: const Text('Print Document'), onTap: () { Navigator.pop(context); _handlePrint(); }),
             ListTile(leading: const Icon(Icons.table_chart_rounded), title: const Text('Export to Excel (CSV)'), onTap: () { Navigator.pop(context); _handleDataExport('EXCEL'); }),
-            ListTile(leading: const Icon(Icons.description_rounded), title: const Text('Export Text Transcript'), onTap: () { Navigator.pop(context); _handleDataExport('TEXT'); }),
+            ListTile(leading: const Icon(Icons.description_rounded), title: const Text('Export to Word (DOCX)'), onTap: () { Navigator.pop(context); _handleDataExport('WORD'); }),
           ],
         ),
       ),
@@ -613,9 +617,36 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
   Future<void> _handleDataExport(String format) async {
     final currentBytes = widget.stateController.currentBytes!;
     final session = widget.stateController.activeSession!;
-    String content = format == 'EXCEL' ? PdfService.exportToCsv(currentBytes) : PdfService.extractText(currentBytes);
-    final success = await PdfModifierService.saveTextDataViaPicker(text: content, suggestedName: "Export.${format == 'EXCEL' ? 'csv' : 'txt'}");
-    if (success) analyticsService.logAction("EXPORT_$format", session.fileName);
+    
+    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+    
+    try {
+      String content = "";
+      String ext = "";
+      
+      if (format == 'EXCEL') {
+        content = PdfService.exportToCsv(currentBytes);
+        ext = "csv";
+      } else if (format == 'WORD') {
+        content = WordExportService.convertToWordTranscript(currentBytes);
+        ext = "docx";
+      } else {
+        content = PdfService.extractText(currentBytes);
+        ext = "txt";
+      }
+      
+      Navigator.pop(context);
+
+      final success = await PdfModifierService.saveTextDataViaPicker(
+        text: content, 
+        suggestedName: "Export.$ext",
+      );
+      
+      if (success) analyticsService.logAction("EXPORT_$format", session.fileName);
+    } catch (e) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Export failed: $e")));
+    }
   }
 }
 

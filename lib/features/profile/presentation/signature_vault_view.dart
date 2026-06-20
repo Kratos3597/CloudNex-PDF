@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../core/theme/pdf_pro_theme.dart';
 import '../services/signature_service.dart';
+import '../../../services/image_processing_service.dart';
 
 class SignatureVaultView extends StatefulWidget {
   const SignatureVaultView({super.key});
@@ -36,9 +37,13 @@ class _SignatureVaultViewState extends State<SignatureVaultView> {
   Future<void> _pickSignature() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
     if (result != null && result.files.single.path != null) {
+      setState(() => _isLoading = true);
       final bytes = await File(result.files.single.path!).readAsBytes();
-      // Heuristic background removal could be added here
-      await _service.saveSignature(bytes);
+      
+      // Heuristic background removal
+      final processedBytes = ImageProcessingService.removeBackground(bytes);
+      
+      await _service.saveSignature(processedBytes);
       _loadSignature();
     }
   }
@@ -59,7 +64,7 @@ class _SignatureVaultViewState extends State<SignatureVaultView> {
               ),
               const SizedBox(height: 8),
               const Text(
-                "Attach a JPEG/PNG of your signature. We will use this to sign documents instantly.",
+                "Attach a JPEG/PNG of your signature. We will remove the background so it looks professional on documents.",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: PdfProTheme.textLight),
               ),
