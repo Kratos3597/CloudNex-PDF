@@ -8,7 +8,7 @@ import '../services/pdf_modifier_service.dart';
 import '../../../services/pdf_service.dart';
 import 'signature_pad_view.dart';
 import 'package:cloudnex_pdf_reader/features/analytics/services/analytics_service.dart';
-import 'file_picker/file_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:printing/printing.dart';
 import 'interactive_signature_overlay.dart';
 import 'interactive_shape_overlay.dart';
@@ -93,7 +93,6 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
                       initialPageNumber: session.activePageNumber,
                       pageLayoutMode: PdfPageLayoutMode.continuous,
                       scrollDirection: PdfScrollDirection.vertical,
-                      // Point 1: Interactive Selection Mode
                       interactionMode: widget.stateController.currentTool == ActivePdfTool.none 
                           ? PdfInteractionMode.pan : PdfInteractionMode.selection,
                       onTap: _handleCanvasTapIntercept,
@@ -137,13 +136,11 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
                   onCancel: () => setState(() => _isDrawingInk = false),
                   onConfirm: (paths, width, color) => _burnInkToPdf(paths, width, color),
                 ),
-              // Point 1 & 2: Annotation Manager FABs
               AnnotationManagerOverlay(
                 controller: session.pdfViewerController,
                 onAddComment: _handleAddComment,
                 onFlatten: _handleFlatten,
               ),
-              // Point 4: Magnifier Glass Simulation
               if (_isMagnifierActive)
                 _buildMagnifierLens(),
             ],
@@ -163,7 +160,7 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(color: PdfProTheme.primaryBlue, width: 3),
-          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)],
+          boxShadow: [const BoxShadow(color: Colors.black26, blurRadius: 10)],
           color: Colors.white,
         ),
         child: const Center(child: Icon(Icons.zoom_in_rounded, size: 40, color: PdfProTheme.primaryBlue)),
@@ -741,9 +738,10 @@ class _PdfWorkspaceViewState extends State<PdfWorkspaceView> {
 
   Future<void> _pickImageForPlacement() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
-    if (result != null && result.files.single.bytes != null) {
-      widget.stateController.setupImagePlacement(result.files.single.bytes!);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Image loaded: Tap on PDF to position')));
+    if (result != null && result.files.single.path != null) {
+      final bytes = await File(result.files.single.path!).readAsBytes();
+      widget.stateController.setupImagePlacement(bytes);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Image loaded: Tap on PDF to position')));
     }
   }
 
