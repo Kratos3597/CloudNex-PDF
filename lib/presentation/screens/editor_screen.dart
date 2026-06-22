@@ -32,7 +32,7 @@ class EditorScreen extends StatefulWidget {
   State<EditorScreen> createState() => _EditorScreenState();
 }
 
-class _EditorScreenState extends State<EditorScreen> {
+class _EditorScreenState extends State<EditorScreen> with AutomaticKeepAliveClientMixin {
   final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey<SfPdfViewerState>();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
@@ -49,13 +49,17 @@ class _EditorScreenState extends State<EditorScreen> {
   bool _isMagnifierActive = false;
 
   @override
+  bool get wantKeepAlive => true; 
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     final size = MediaQuery.of(context).size;
     final bool isDesktopMode = size.width > 900;
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFF2C2E33), // Darker background to hide reloads
+      backgroundColor: const Color(0xFF2C2E33), 
       appBar: isDesktopMode ? null : _buildAppBar(),
       drawer: _buildOutlineDrawer(),
       body: ListenableBuilder(
@@ -82,7 +86,6 @@ class _EditorScreenState extends State<EditorScreen> {
                       onExport: _showExportOptions,
                       onPrint: _handlePrint,
                     ),
-                  // Tab bar removed as requested
                   if (_isSearching) _buildSearchBar(session),
                   Expanded(
                     child: Stack(
@@ -92,7 +95,6 @@ class _EditorScreenState extends State<EditorScreen> {
                           key: _pdfViewerKey,
                           controller: session.pdfViewerController,
                           initialPageNumber: session.activePageNumber,
-                          // PERFORMANCE FIX: Consistent layout mode prevents re-render flicker
                           pageLayoutMode: PdfPageLayoutMode.continuous,
                           scrollDirection: PdfScrollDirection.vertical,
                           enableTextSelection: widget.stateController.isEditMode,
@@ -191,7 +193,7 @@ class _EditorScreenState extends State<EditorScreen> {
       ),
       title: Text(
         widget.stateController.activeSession?.fileName ?? "CloudNex PDF Pro",
-        style: const TextStyle(fontSize: 16),
+        style: const TextStyle(fontSize: 14),
       ),
       actions: [
         _buildModeToggle(),
@@ -375,23 +377,23 @@ class _EditorScreenState extends State<EditorScreen> {
       final updatedBytes = await RenderEngine.addTextAnnotation(
         bytes: currentBytes,
         pageIndex: widget.stateController.activePageNumber - 1,
-        bounds: [const Rect.fromLTWH(100, 100, 200, 20)],
-        type: sf.PdfTextMarkupAnnotationType.highlight,
+        bounds: [const Rect.fromLTWH(100, 100, 200, 20)], 
+        type: sf.PdfTextMarkupAnnotationType.highlight, 
         text: details.selectedText,
       );
       if (!mounted) return;
-      Navigator.pop(context);
+      Navigator.of(context, rootNavigator: true).pop();
       widget.stateController.commitMutation(updatedBytes);
       widget.stateController.clearActiveTool();
     } catch (e) {
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
     }
   }
 
   Future<void> _openSignatureVault() async {
     final bytes = await SignatureService().getSignatureBytes();
     if (bytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No signature saved. Please add one in Profile.")));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No signature saved. Please add one in Profile.")));
       return;
     }
     setState(() {
@@ -479,7 +481,7 @@ class _EditorScreenState extends State<EditorScreen> {
       }
 
       if (!mounted) return;
-      Navigator.pop(context);
+      Navigator.of(context, rootNavigator: true).pop();
       
       widget.stateController.commitMutation(currentBytes);
       session.shadowObjects.clear();
@@ -487,7 +489,7 @@ class _EditorScreenState extends State<EditorScreen> {
       
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("CloudNex Compilation Complete: All edits flattened into PDF.")));
     } catch (e) {
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Flattening failed: $e")));
     }
   }
@@ -516,7 +518,7 @@ class _EditorScreenState extends State<EditorScreen> {
     );
 
     if (!mounted) return;
-    Navigator.pop(context);
+    Navigator.of(context, rootNavigator: true).pop();
     
     widget.stateController.commitMutation(updatedBytes);
     setState(() => _isDrawingInk = false);
@@ -534,11 +536,10 @@ class _EditorScreenState extends State<EditorScreen> {
 
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
 
-    // Neural analysis placeholder
     final zones = VisionPipeline.scanPage(currentBytes, pageIndex);
     
     if (!mounted) return;
-    Navigator.pop(context);
+    Navigator.of(context, rootNavigator: true).pop();
 
     NeuralZone? match;
     for (var zone in zones) {
@@ -579,7 +580,7 @@ class _EditorScreenState extends State<EditorScreen> {
     );
 
     if (!mounted) return;
-    Navigator.pop(context);
+    Navigator.of(context, rootNavigator: true).pop();
     
     widget.stateController.commitMutation(updatedBytes);
     widget.stateController.clearActiveTool();
@@ -682,7 +683,7 @@ class _EditorScreenState extends State<EditorScreen> {
       }
       
       if (!mounted) return;
-      Navigator.pop(context);
+      Navigator.of(context, rootNavigator: true).pop();
 
       final success = await EditEngine.saveDocumentViaSystemPicker(
         bytes: fileData, 
@@ -691,12 +692,12 @@ class _EditorScreenState extends State<EditorScreen> {
       
       if (success) analyticsService.logAction("EXPORT_$format", session.fileName);
     } catch (e) {
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Export failed: $e")));
     }
   }
 
-  void _burnSignatureToPdf(Offset screenPos, Size size) {} // No longer used in Shadow mode
+  void _burnSignatureToPdf(Offset screenPos, Size size) {}
 
   Widget _buildModeToggle() {
     final isEdit = widget.stateController.isEditMode;

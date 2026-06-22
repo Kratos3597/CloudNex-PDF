@@ -1,5 +1,7 @@
 import 'dart:typed_data';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart' as sf;
 import '../../engine/memory/memory_manager.dart';
@@ -27,6 +29,7 @@ class PdfSession {
 
   // AI DOM Cache
   final Map<int, DocumentPageDom> pageDoms = {};
+  final Set<int> pagesBeingProcessed = {};
 
   // SHADOW LAYER: Live interactive objects that are not yet burned into the PDF
   final List<ShadowObject> shadowObjects = [];
@@ -46,11 +49,23 @@ class PdfSession {
   void dispose() {
     pdfViewerController.dispose();
     liveDocument?.dispose();
+    for (final dom in pageDoms.values) {
+      // If DocumentPageDom needs specific cleanup, do it here
+    }
+    pageDoms.clear();
   }
 
-  void refreshBytes() {
+  /// REBUILD FIX: Ensures liveDocument always matches currentBytes
+  void rebuildLiveDocument() {
+    liveDocument?.dispose();
+    if (currentBytes != null) {
+      liveDocument = sf.PdfDocument(inputBytes: currentBytes, password: password);
+    }
+  }
+
+  Future<void> refreshBytesAsync() async {
     if (liveDocument != null) {
-      final List<int> saved = liveDocument!.saveSync();
+      final List<int> saved = await compute((doc) => doc.saveSync(), liveDocument!);
       currentBytes = Uint8List.fromList(saved);
     }
   }
@@ -59,6 +74,9 @@ class PdfSession {
 class AppState extends ChangeNotifier {
   PdfSession? _activeSession;
   bool _isEditMode = false;
+  
+  static const int maxUndoSteps = 20;
+  Timer? _pageUpdateDebounce;
 
   ActivePdfTool _currentTool = ActivePdfTool.none;
   Uint8List? _activeSignatureGraphicBytes;
@@ -93,7 +111,6 @@ class AppState extends ChangeNotifier {
   String? get selectedShadowObjectId => _selectedShadowObjectId;
 
   void openDocument(Uint8List bytes, String fileName, {String? filePath, String? password, int initialPage = 1}) {
-    // Close existing session before opening a new one
     _activeSession?.dispose();
     
     _activeSession = PdfSession(
@@ -116,9 +133,17 @@ class AppState extends ChangeNotifier {
   Future<void> _triggerAiAnalysis(PdfSession session, int pageIndex) async {
     if (session.currentBytes == null || session.pageDoms.containsKey(pageIndex)) return;
     
-    final dom = await ai.processPage(session.id, session.currentBytes!, pageIndex);
-    session.pageDoms[pageIndex] = dom;
-    notifyListeners();
+    // RACE CONDITION GUARD
+    if (session.pagesBeingProcessed.contains(pageIndex)) return;
+    session.pagesBeingProcessed.add(pageIndex);
+
+    try {
+      final dom = await ai.processPage(session.id, session.currentBytes!, pageIndex);
+      session.pageDoms[pageIndex] = dom;
+      notifyListeners();
+    } finally {
+      session.pagesBeingProcessed.remove(pageIndex);
+    }
   }
 
   // SHADOW LAYER METHODS
@@ -212,7 +237,12 @@ class AppState extends ChangeNotifier {
 
     _triggerBackgroundCacheSync(_activeSession!);
     _triggerAiAnalysis(_activeSession!, pageNum - 1);
-    notifyListeners();
+    
+    // NOTIFY DEBOUNCE
+    _pageUpdateDebounce?.cancel();
+    _pageUpdateDebounce = Timer(const Duration(milliseconds: 100), () {
+      notifyListeners();
+    });
   }
 
   void commitMutation(Uint8List mutatedBytes) {
@@ -220,14 +250,18 @@ class AppState extends ChangeNotifier {
 
     if (_activeSession!.currentBytes != null) {
       _activeSession!.undoStack.add(_activeSession!.currentBytes!);
+      // MEMORY SAFETY: Limit undo stack
+      if (_activeSession!.undoStack.length > maxUndoSteps) {
+        _activeSession!.undoStack.removeAt(0);
+      }
     }
     _activeSession!.currentBytes = mutatedBytes;
     
-    _activeSession!.liveDocument?.dispose();
-    _activeSession!.liveDocument = sf.PdfDocument(inputBytes: mutatedBytes, password: _activeSession!.password);
+    // SYNC REBUILD
+    _activeSession!.rebuildLiveDocument();
 
     _activeSession!.redoStack.clear();
-    _activeSession!.pageDoms.clear(); // Invalidate AI cache as bytes changed
+    _activeSession!.pageDoms.clear(); 
     _updateSecurityReport(_activeSession!);
     _triggerBackgroundCacheSync(_activeSession!);
     _triggerAiAnalysis(_activeSession!, _activeSession!.activePageNumber - 1);
@@ -257,6 +291,10 @@ class AppState extends ChangeNotifier {
       _activeSession!.redoStack.add(_activeSession!.currentBytes!);
     }
     _activeSession!.currentBytes = previousState;
+    
+    // REBUILD FIX
+    _activeSession!.rebuildLiveDocument();
+    
     _triggerBackgroundCacheSync(_activeSession!);
     notifyListeners();
   }
@@ -269,12 +307,17 @@ class AppState extends ChangeNotifier {
       _activeSession!.undoStack.add(_activeSession!.currentBytes!);
     }
     _activeSession!.currentBytes = nextState;
+    
+    // REBUILD FIX
+    _activeSession!.rebuildLiveDocument();
+    
     _triggerBackgroundCacheSync(_activeSession!);
     notifyListeners();
   }
 
   @override
   void dispose() {
+    _pageUpdateDebounce?.cancel();
     _activeSession?.dispose();
     super.dispose();
   }
