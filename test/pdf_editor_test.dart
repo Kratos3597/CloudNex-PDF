@@ -1,16 +1,16 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:cloudnex_pdf_reader/features/pdf_editor/controller/pdf_state_controller.dart';
-import 'package:cloudnex_pdf_reader/features/pdf_editor/services/pdf_modifier_service.dart';
+import 'package:cloudnex_pdf_reader/core/state/app_state.dart';
+import 'package:cloudnex_pdf_reader/engine/edit/edit_engine.dart';
 
 void main() {
   group('PdfEditor Core Engine Tests', () {
-    late PdfStateController stateController;
+    late AppState stateController;
     // Dummy byte representation for testing
     final Uint8List mockBytes = Uint8List.fromList([0x25, 0x50, 0x44, 0x46]);
 
     setUp(() {
-      stateController = PdfStateController();
+      stateController = AppState();
     });
 
     test('Initial state should be empty', () {
@@ -19,6 +19,8 @@ void main() {
     });
 
     test('Committing a mutation should update state and enable undo', () {
+      // Need a session for mutation
+      stateController.openDocument(mockBytes, "test.pdf");
       stateController.commitMutation(mockBytes);
 
       expect(stateController.currentBytes, equals(mockBytes));
@@ -26,6 +28,7 @@ void main() {
     });
 
     test('Undo should revert state correctly', () {
+      stateController.openDocument(mockBytes, "test.pdf");
       final Uint8List state1 = Uint8List.fromList([1, 2, 3]);
       final Uint8List state2 = Uint8List.fromList([4, 5, 6]);
 
@@ -46,9 +49,9 @@ void main() {
       expect(stateController.currentTool, equals(ActivePdfTool.none));
     });
 
-    test('Metadata scrub verification (Point 14 Compliance)', () {
+    test('Metadata scrub verification', () {
       // Create a mock report to verify our structural analyzer
-      final report = PdfModifierService.analyzeDocumentStructure(mockBytes);
+      final report = EditEngine.analyzeDocumentStructure(mockBytes);
 
       // We expect the report to identify it as unverified or safe depending on input
       expect(report, isNotNull);

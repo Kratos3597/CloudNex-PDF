@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../features/pdf_editor/controller/pdf_state_controller.dart';
+import '../state/app_state.dart';
 
-final pdfStateProvider = ChangeNotifierProvider<PdfStateController>((ref) {
-  return PdfStateController();
+final pdfStateProvider = ChangeNotifierProvider<AppState>((ref) {
+  return AppState();
 });

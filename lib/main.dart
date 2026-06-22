@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/pdf_pro_theme.dart';
-import 'features/workspace/presentation/workspace_shell.dart';
+import 'presentation/screens/viewer_screen.dart';
 import 'core/providers/theme_provider.dart';
 
 void main() {
@@ -37,7 +37,7 @@ class PdfProApp extends ConsumerWidget {
       theme: PdfProTheme.lightTheme,
       darkTheme: PdfProTheme.darkTheme,
       themeMode: themeMode,
-      home: const WorkspaceShell(),
+      home: const ViewerScreen(),
     );
   }
 }

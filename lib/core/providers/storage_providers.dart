@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../services/storage/cloudnex_database.dart';
-import '../../features/library/domain/models/document_record.dart';
+import '../../storage/database.dart';
+import '../../storage/models/document_model.dart';
 
-final databaseProvider = Provider<CloudNexDatabase>((ref) {
-  return CloudNexDatabase();
+final databaseProvider = Provider<StorageDatabase>((ref) {
+  return StorageDatabase();
 });
 
 final documentListProvider = FutureProvider<List<DocumentRecord>>((ref) async {
