@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../../core/state/app_state.dart';
@@ -64,8 +65,17 @@ class OverlayLayer extends StatelessWidget {
           style: TextStyle(fontSize: obj.fontSize, color: obj.color),
         );
       case ShadowObjectType.signature:
-        // Signature content is image bytes as string code units
-        return Image.memory(stateController.activeSignatureGraphicBytes!);
+        // FIX: Safe null handling for signature bytes
+        final bytes = stateController.activeSignatureGraphicBytes;
+        if (bytes == null) {
+          // If bytes are not in controller, try parsing from content (fallback)
+          try {
+             final fallbackBytes = Uint8List.fromList(obj.content.codeUnits);
+             if (fallbackBytes.isNotEmpty) return Image.memory(fallbackBytes);
+          } catch (_) {}
+          return const Center(child: Icon(Icons.error_outline, color: PdfProTheme.errorRed));
+        }
+        return Image.memory(bytes);
       case ShadowObjectType.shape:
         return Container(
           decoration: BoxDecoration(

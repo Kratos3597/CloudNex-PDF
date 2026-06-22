@@ -237,14 +237,14 @@ class _QuickAction extends StatelessWidget {
   }
 }
 
-class _DocumentCard extends StatelessWidget {
+class _DocumentCard extends ConsumerWidget {
   final DocumentRecord doc;
   final dynamic pdfState;
 
   const _DocumentCard({required this.doc, required this.pdfState});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
@@ -266,6 +266,8 @@ class _DocumentCard extends StatelessWidget {
                 builder: (context) => EditorScreen(stateController: pdfState),
               ),
             );
+          } else {
+             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("File no longer exists")));
           }
         },
         leading: Container(
@@ -287,7 +289,40 @@ class _DocumentCard extends StatelessWidget {
           "Edited ${doc.lastOpenedDate.day}/${doc.lastOpenedDate.month}",
           style: const TextStyle(color: PdfProTheme.textLight, fontSize: 12),
         ),
-        trailing: const Icon(Icons.more_vert_rounded, color: PdfProTheme.textLight),
+        trailing: PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert_rounded, color: PdfProTheme.textLight),
+          onSelected: (value) async {
+            if (value == 'delete') {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Remove from Recent?"),
+                  content: const Text("This will remove the record from your history. The file will remain on your device."),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+                    TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Remove", style: TextStyle(color: PdfProTheme.errorRed))),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                await ref.read(databaseProvider).deleteDocument(doc.id);
+                ref.invalidate(documentListProvider);
+              }
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete_outline, size: 20, color: PdfProTheme.errorRed),
+                  SizedBox(width: 8),
+                  Text("Remove", style: TextStyle(color: PdfProTheme.errorRed)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

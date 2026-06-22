@@ -62,104 +62,121 @@ class _EditorScreenState extends State<EditorScreen> with AutomaticKeepAliveClie
       backgroundColor: const Color(0xFF2C2E33), 
       appBar: isDesktopMode ? null : _buildAppBar(),
       drawer: _buildOutlineDrawer(),
-      body: ListenableBuilder(
-        listenable: widget.stateController,
-        builder: (context, _) {
-          final session = widget.stateController.activeSession;
-          if (session == null) {
-            return const Center(child: Text('No active document', style: TextStyle(color: Colors.white70)));
-          }
-          
-          final byteStream = session.currentBytes;
-          if (byteStream == null) return const Center(child: CircularProgressIndicator());
+      body: _buildBody(isDesktopMode),
+    );
+  }
 
-          return Stack(
-            children: [
-              Column(
+  Widget _buildBody(bool isDesktopMode) {
+    final session = widget.stateController.activeSession;
+    if (session == null) {
+      return const Center(child: Text('No active document', style: TextStyle(color: Colors.white70)));
+    }
+    
+    final byteStream = session.currentBytes;
+    if (byteStream == null) return const Center(child: CircularProgressIndicator());
+
+    return Stack(
+      children: [
+        Column(
+          children: [
+            if (isDesktopMode) 
+              FloatingToolbar(
+                onAnnotate: _showAnnotationOptions,
+                onSign: _openSignatureVault,
+                onEdit: _enableNeuralEditor,
+                onForms: _handleFormFilling,
+                onExport: _showExportOptions,
+                onPrint: _handlePrint,
+              ),
+            if (_isSearching) _buildSearchBar(session),
+            Expanded(
+              child: Stack(
                 children: [
-                  if (isDesktopMode) 
-                    FloatingToolbar(
-                      onAnnotate: _showAnnotationOptions,
-                      onSign: _openSignatureVault,
-                      onEdit: _enableNeuralEditor,
-                      onForms: _handleFormFilling,
-                      onExport: _showExportOptions,
-                      onPrint: _handlePrint,
-                    ),
-                  if (_isSearching) _buildSearchBar(session),
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        SfPdfViewer.memory(
-                          byteStream,
-                          key: _pdfViewerKey,
-                          controller: session.pdfViewerController,
-                          initialPageNumber: session.activePageNumber,
-                          pageLayoutMode: PdfPageLayoutMode.continuous,
-                          scrollDirection: PdfScrollDirection.vertical,
-                          enableTextSelection: widget.stateController.isEditMode,
-                          enableDocumentLinkAnnotation: true,
-                          interactionMode: widget.stateController.isEditMode 
-                                  ? PdfInteractionMode.selection 
-                                  : PdfInteractionMode.pan,
-                          onTap: _handleCanvasTapIntercept,
-                          onPageChanged: (details) => widget.stateController.updatePageNumber(details.newPageNumber),
-                          onTextSelectionChanged: _handleTextSelection,
-                          onDocumentLoaded: (details) {
-                            setState(() {
-                              _bookmarks = details.document.bookmarks;
-                            });
-                          },
-                        ),
-                        OverlayLayer(
-                          stateController: widget.stateController,
-                          pdfViewerController: session.pdfViewerController,
-                        ),
-                        if (_isMagnifierActive)
-                          _buildMagnifierLens(),
-                      ],
+                  // PERFORMANCE FIX: RepaintBoundary around viewer
+                  RepaintBoundary(
+                    child: SfPdfViewer.memory(
+                      byteStream,
+                      key: _pdfViewerKey,
+                      controller: session.pdfViewerController,
+                      initialPageNumber: session.activePageNumber,
+                      pageLayoutMode: PdfPageLayoutMode.continuous,
+                      scrollDirection: PdfScrollDirection.vertical,
+                      enableTextSelection: widget.stateController.isEditMode,
+                      enableDocumentLinkAnnotation: true,
+                      interactionMode: widget.stateController.isEditMode 
+                              ? PdfInteractionMode.selection 
+                              : PdfInteractionMode.pan,
+                      onTap: _handleCanvasTapIntercept,
+                      onPageChanged: (details) => widget.stateController.updatePageNumber(details.newPageNumber),
+                      onTextSelectionChanged: _handleTextSelection,
+                      onDocumentLoaded: (details) {
+                        setState(() {
+                          _bookmarks = details.document.bookmarks;
+                        });
+                      },
                     ),
                   ),
-                  if (!isDesktopMode) _buildToolDock(),
+                  // ListenableBuilder is now strictly for the interactive layer
+                  ListenableBuilder(
+                    listenable: widget.stateController,
+                    builder: (context, _) => OverlayLayer(
+                      stateController: widget.stateController,
+                      pdfViewerController: session.pdfViewerController,
+                    ),
+                  ),
+                  if (_isMagnifierActive)
+                    _buildMagnifierLens(),
                 ],
               ),
-              if (_isPlacingSignature && _pendingSignature != null)
-                SignatureOverlay(
-                  imageBytes: _pendingSignature!,
-                  onCancel: () => setState(() => _isPlacingSignature = false),
-                  onConfirm: (pos, size) => _addShadowSignature(pos, size),
+            ),
+            if (!isDesktopMode) _buildToolDock(),
+          ],
+        ),
+        
+        // Modal Overlays
+        ListenableBuilder(
+          listenable: widget.stateController,
+          builder: (context, _) {
+            return Stack(
+              children: [
+                if (_isPlacingSignature && _pendingSignature != null)
+                  SignatureOverlay(
+                    imageBytes: _pendingSignature!,
+                    onCancel: () => setState(() => _isPlacingSignature = false),
+                    onConfirm: (pos, size) => _addShadowSignature(pos, size),
+                  ),
+                if (_isPlacingText)
+                  TextOverlay(
+                    onCancel: () => setState(() => _isPlacingText = false),
+                    onConfirm: (text, pos, size, fontSize, color) => _addShadowText(text, pos, size, fontSize, color),
+                  ),
+                if (_isPlacingShape && _activeShapeType != null)
+                  ShapeOverlay(
+                    type: _activeShapeType!,
+                    onCancel: () => setState(() => _isPlacingShape = false),
+                    onConfirm: (pos, size) => _addShadowShape(pos, size),
+                  ),
+                if (_isNeuralActive && _activeNeuralZone != null)
+                  NeuralEditor(
+                    zone: _activeNeuralZone!,
+                    onCancel: () => setState(() => _isNeuralActive = false),
+                    onConfirm: (text, size) => _burnNeuralEdit(text, size),
+                  ),
+                if (_isDrawingInk)
+                  InkDrawingOverlay(
+                    onCancel: () => setState(() => _isDrawingInk = false),
+                    onConfirm: (paths, width, color) => _burnInkToPdf(paths, width, color),
+                  ),
+                AnnotationTools(
+                  controller: session.pdfViewerController,
+                  onAddComment: _handleAddComment,
+                  onFlatten: _handleFlattenAndBurn,
                 ),
-              if (_isPlacingText)
-                TextOverlay(
-                  onCancel: () => setState(() => _isPlacingText = false),
-                  onConfirm: (text, pos, size, fontSize, color) => _addShadowText(text, pos, size, fontSize, color),
-                ),
-              if (_isPlacingShape && _activeShapeType != null)
-                ShapeOverlay(
-                  type: _activeShapeType!,
-                  onCancel: () => setState(() => _isPlacingShape = false),
-                  onConfirm: (pos, size) => _addShadowShape(pos, size),
-                ),
-              if (_isNeuralActive && _activeNeuralZone != null)
-                NeuralEditor(
-                  zone: _activeNeuralZone!,
-                  onCancel: () => setState(() => _isNeuralActive = false),
-                  onConfirm: (text, size) => _burnNeuralEdit(text, size),
-                ),
-              if (_isDrawingInk)
-                InkDrawingOverlay(
-                  onCancel: () => setState(() => _isDrawingInk = false),
-                  onConfirm: (paths, width, color) => _burnInkToPdf(paths, width, color),
-                ),
-              AnnotationTools(
-                controller: session.pdfViewerController,
-                onAddComment: _handleAddComment,
-                onFlatten: _handleFlattenAndBurn,
-              ),
-            ],
-          );
-        },
-      ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -594,7 +611,7 @@ class _EditorScreenState extends State<EditorScreen> with AutomaticKeepAliveClie
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     final updatedBytes = await RenderEngine.compressPdf(bytes);
     if (!mounted) return;
-    Navigator.pop(context);
+    Navigator.of(context, rootNavigator: true).pop();
     widget.stateController.commitMutation(updatedBytes);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("PDF Compressed for high-speed transmission.")));
   }
