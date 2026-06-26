@@ -56,17 +56,19 @@ class _EditorScreenState extends State<EditorScreen> with AutomaticKeepAliveClie
     super.build(context);
     final size = MediaQuery.of(context).size;
     final bool isDesktopMode = size.width > 900;
+    final isEditMode = widget.stateController.isEditMode;
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFF2C2E33), 
-      appBar: isDesktopMode ? null : _buildAppBar(),
+      backgroundColor: isEditMode ? const Color(0xFF1E1F22) : const Color(0xFF2C2E33), 
+      appBar: _buildAppBar(isDesktopMode),
       drawer: _buildOutlineDrawer(),
-      body: _buildBody(isDesktopMode),
+      body: _buildLayeredBody(isDesktopMode),
     );
   }
 
-  Widget _buildBody(bool isDesktopMode) {
+  /// NEW: Physical separation of View and Edit layers
+  Widget _buildLayeredBody(bool isDesktopMode) {
     final session = widget.stateController.activeSession;
     if (session == null) {
       return const Center(child: Text('No active document', style: TextStyle(color: Colors.white70)));
@@ -79,20 +81,16 @@ class _EditorScreenState extends State<EditorScreen> with AutomaticKeepAliveClie
       children: [
         Column(
           children: [
-            if (isDesktopMode) 
-              FloatingToolbar(
-                onAnnotate: _showAnnotationOptions,
-                onSign: _openSignatureVault,
-                onEdit: _enableNeuralEditor,
-                onForms: _handleFormFilling,
-                onExport: _showExportOptions,
-                onPrint: _handlePrint,
-              ),
+            // Edit Workspace Top Bar
+            if (widget.stateController.isEditMode) 
+              _buildEditWorkspaceHeader(isDesktopMode),
+            
             if (_isSearching) _buildSearchBar(session),
+            
             Expanded(
               child: Stack(
                 children: [
-                  // PERFORMANCE FIX: RepaintBoundary around viewer
+                  // BASE LAYER: Always the Viewer
                   RepaintBoundary(
                     child: SfPdfViewer.memory(
                       byteStream,
@@ -116,67 +114,118 @@ class _EditorScreenState extends State<EditorScreen> with AutomaticKeepAliveClie
                       },
                     ),
                   ),
-                  // ListenableBuilder is now strictly for the interactive layer
-                  ListenableBuilder(
-                    listenable: widget.stateController,
-                    builder: (context, _) => OverlayLayer(
-                      stateController: widget.stateController,
-                      pdfViewerController: session.pdfViewerController,
-                    ),
-                  ),
+
+                  // EDIT LAYER: Only mounted when Editing
+                  if (widget.stateController.isEditMode)
+                    _buildInteractiveEditLayer(session),
+                  
                   if (_isMagnifierActive)
                     _buildMagnifierLens(),
                 ],
               ),
             ),
-            if (!isDesktopMode) _buildToolDock(),
+            
+            // View Mode Bottom Bar (Clean)
+            if (!widget.stateController.isEditMode)
+               _buildReadingModeFooter(),
           ],
         ),
         
-        // Modal Overlays
-        ListenableBuilder(
-          listenable: widget.stateController,
-          builder: (context, _) {
-            return Stack(
-              children: [
-                if (_isPlacingSignature && _pendingSignature != null)
-                  SignatureOverlay(
-                    imageBytes: _pendingSignature!,
-                    onCancel: () => setState(() => _isPlacingSignature = false),
-                    onConfirm: (pos, size) => _addShadowSignature(pos, size),
-                  ),
-                if (_isPlacingText)
-                  TextOverlay(
-                    onCancel: () => setState(() => _isPlacingText = false),
-                    onConfirm: (text, pos, size, fontSize, color) => _addShadowText(text, pos, size, fontSize, color),
-                  ),
-                if (_isPlacingShape && _activeShapeType != null)
-                  ShapeOverlay(
-                    type: _activeShapeType!,
-                    onCancel: () => setState(() => _isPlacingShape = false),
-                    onConfirm: (pos, size) => _addShadowShape(pos, size),
-                  ),
-                if (_isNeuralActive && _activeNeuralZone != null)
-                  NeuralEditor(
-                    zone: _activeNeuralZone!,
-                    onCancel: () => setState(() => _isNeuralActive = false),
-                    onConfirm: (text, size) => _burnNeuralEdit(text, size),
-                  ),
-                if (_isDrawingInk)
-                  InkDrawingOverlay(
-                    onCancel: () => setState(() => _isDrawingInk = false),
-                    onConfirm: (paths, width, color) => _burnInkToPdf(paths, width, color),
-                  ),
-                AnnotationTools(
-                  controller: session.pdfViewerController,
-                  onAddComment: _handleAddComment,
-                  onFlatten: _handleFlattenAndBurn,
-                ),
-              ],
-            );
-          },
-        ),
+        // MODAL TOOLS: Only active when a tool is selected
+        if (widget.stateController.isEditMode)
+           _buildModalToolOverlays(session),
       ],
+    );
+  }
+
+  Widget _buildEditWorkspaceHeader(bool isDesktopMode) {
+    return Container(
+      color: Colors.white,
+      child: FloatingToolbar(
+        onAnnotate: _showAnnotationOptions,
+        onSign: _openSignatureVault,
+        onEdit: _enableNeuralEditor,
+        onForms: _handleFormFilling,
+        onExport: _showExportOptions,
+        onPrint: _handlePrint,
+      ),
+    );
+  }
+
+  Widget _buildInteractiveEditLayer(PdfSession session) {
+    return ListenableBuilder(
+      listenable: widget.stateController,
+      builder: (context, _) => OverlayLayer(
+        stateController: widget.stateController,
+        pdfViewerController: session.pdfViewerController,
+      ),
+    );
+  }
+
+  Widget _buildReadingModeFooter() {
+    return Container(
+      height: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.black12)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(icon: const Icon(Icons.list_rounded), onPressed: () => _scaffoldKey.currentState?.openDrawer()),
+          Text(
+            "Page ${widget.stateController.activePageNumber}",
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+          IconButton(icon: const Icon(Icons.share_outlined), onPressed: _showExportOptions),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModalToolOverlays(PdfSession session) {
+    return ListenableBuilder(
+      listenable: widget.stateController,
+      builder: (context, _) {
+        return Stack(
+          children: [
+            if (_isPlacingSignature && _pendingSignature != null)
+              SignatureOverlay(
+                imageBytes: _pendingSignature!,
+                onCancel: () => setState(() => _isPlacingSignature = false),
+                onConfirm: (pos, size) => _addShadowSignature(pos, size),
+              ),
+            if (_isPlacingText)
+              TextOverlay(
+                onCancel: () => setState(() => _isPlacingText = false),
+                onConfirm: (text, pos, size, fontSize, color) => _addShadowText(text, pos, size, fontSize, color),
+              ),
+            if (_isPlacingShape && _activeShapeType != null)
+              ShapeOverlay(
+                type: _activeShapeType!,
+                onCancel: () => setState(() => _isPlacingShape = false),
+                onConfirm: (pos, size) => _addShadowShape(pos, size),
+              ),
+            if (_isNeuralActive && _activeNeuralZone != null)
+              NeuralEditor(
+                zone: _activeNeuralZone!,
+                onCancel: () => setState(() => _isNeuralActive = false),
+                onConfirm: (text, size) => _burnNeuralEdit(text, size),
+              ),
+            if (_isDrawingInk)
+              InkDrawingOverlay(
+                onCancel: () => setState(() => _isDrawingInk = false),
+                onConfirm: (paths, width, color) => _burnInkToPdf(paths, width, color),
+              ),
+            AnnotationTools(
+              controller: session.pdfViewerController,
+              onAddComment: _handleAddComment,
+              onFlatten: _handleFlattenAndBurn,
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -198,9 +247,14 @@ class _EditorScreenState extends State<EditorScreen> with AutomaticKeepAliveClie
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(bool isDesktopMode) {
+    if (isDesktopMode && widget.stateController.isEditMode) {
+       return const PreferredSize(preferredSize: Size.zero, child: SizedBox.shrink());
+    }
+
     return AppBar(
       backgroundColor: Colors.white,
+      elevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_rounded, color: PdfProTheme.textDark),
         onPressed: () {
@@ -210,17 +264,15 @@ class _EditorScreenState extends State<EditorScreen> with AutomaticKeepAliveClie
       ),
       title: Text(
         widget.stateController.activeSession?.fileName ?? "CloudNex PDF Pro",
-        style: const TextStyle(fontSize: 14),
+        style: const TextStyle(fontSize: 14, color: PdfProTheme.textDark, fontWeight: FontWeight.bold),
       ),
       actions: [
         _buildModeToggle(),
-        IconButton(
-          icon: const Icon(Icons.menu_rounded),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
         IconButton(icon: const Icon(Icons.search_rounded), onPressed: () => setState(() => _isSearching = !_isSearching)),
-        IconButton(icon: const Icon(Icons.undo_rounded), onPressed: widget.stateController.canUndo ? () => widget.stateController.undo() : null),
-        IconButton(icon: const Icon(Icons.redo_rounded), onPressed: widget.stateController.canRedo ? () => widget.stateController.redo() : null),
+        if (widget.stateController.isEditMode) ...[
+          IconButton(icon: const Icon(Icons.undo_rounded), onPressed: widget.stateController.canUndo ? () => widget.stateController.undo() : null),
+          IconButton(icon: const Icon(Icons.redo_rounded), onPressed: widget.stateController.canRedo ? () => widget.stateController.redo() : null),
+        ],
         const SizedBox(width: 8),
       ],
     );
@@ -246,6 +298,9 @@ class _EditorScreenState extends State<EditorScreen> with AutomaticKeepAliveClie
   }
 
   Widget _buildToolDock() {
+    // Only show dock in Edit mode
+    if (!widget.stateController.isEditMode) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       decoration: const BoxDecoration(
@@ -611,7 +666,7 @@ class _EditorScreenState extends State<EditorScreen> with AutomaticKeepAliveClie
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     final updatedBytes = await RenderEngine.compressPdf(bytes);
     if (!mounted) return;
-    Navigator.of(context, rootNavigator: true).pop();
+    Navigator.pop(context);
     widget.stateController.commitMutation(updatedBytes);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("PDF Compressed for high-speed transmission.")));
   }
