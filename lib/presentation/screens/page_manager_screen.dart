@@ -35,7 +35,7 @@ class _PageManagerScreenState extends State<PageManagerScreen> {
   }
 
   Future<void> _generatePreviews() async {
-    final bytes = widget.stateController.currentBytes;
+    final bytes = widget.stateController.baseBytes;
     if (bytes == null) return;
 
     try {
@@ -166,7 +166,7 @@ class _PageManagerScreenState extends State<PageManagerScreen> {
   }
 
   Future<void> _handleCommit() async {
-    final currentBytes = widget.stateController.currentBytes;
+    final currentBytes = widget.stateController.baseBytes;
     if (currentBytes == null) return;
 
     showDialog(

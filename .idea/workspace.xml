@@ -4,7 +4,13 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3b6dc0e0-037a-4e5e-86a1-6da39bcbd08e" name="Changes" comment="new studio" />
+    <list default="true" id="3b6dc0e0-037a-4e5e-86a1-6da39bcbd08e" name="Changes" comment="new studio">
+      <change afterPath="$PROJECT_DIR$/lib/presentation/widgets/persistent_pdf_viewer.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/core/state/app_state.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/core/state/app_state.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/presentation/screens/editor_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/presentation/screens/editor_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/presentation/screens/page_manager_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/presentation/screens/page_manager_screen.dart" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

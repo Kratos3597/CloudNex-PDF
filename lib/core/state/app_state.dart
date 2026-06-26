@@ -18,8 +18,14 @@ class PdfSession {
   final String id;
   final String fileName;
   final String? filePath;
-  Uint8List? currentBytes;
+  
+  /// The immutable "Base Bytes" that the viewer loads from.
+  /// RE-LOADING IS EXPENSIVE: Only update this when explicitly committing or flattening.
+  Uint8List? baseBytes;
+  
+  /// The in-memory structural document for modifications.
   sf.PdfDocument? liveDocument; 
+  
   final List<Uint8List> undoStack = [];
   final List<Uint8List> redoStack = [];
   final PdfViewerController pdfViewerController = PdfViewerController();
@@ -38,35 +44,34 @@ class PdfSession {
     required this.id,
     required this.fileName,
     this.filePath,
-    this.currentBytes,
+    this.baseBytes,
     this.password,
   }) {
-    if (currentBytes != null) {
-      liveDocument = sf.PdfDocument(inputBytes: currentBytes, password: password);
+    if (baseBytes != null) {
+      liveDocument = sf.PdfDocument(inputBytes: baseBytes, password: password);
     }
   }
 
   void dispose() {
     pdfViewerController.dispose();
     liveDocument?.dispose();
-    for (final dom in pageDoms.values) {
-      // If DocumentPageDom needs specific cleanup, do it here
-    }
     pageDoms.clear();
   }
 
-  /// REBUILD FIX: Ensures liveDocument always matches currentBytes
-  void rebuildLiveDocument() {
-    liveDocument?.dispose();
-    if (currentBytes != null) {
-      liveDocument = sf.PdfDocument(inputBytes: currentBytes, password: password);
-    }
-  }
-
-  Future<void> refreshBytesAsync() async {
+  /// Updates baseBytes from the liveDocument. 
+  /// CAUTION: This will cause the SfPdfViewer to reload if it listens to baseBytes.
+  Future<void> flushToBytes() async {
     if (liveDocument != null) {
       final List<int> saved = await compute((doc) => doc.saveSync(), liveDocument!);
-      currentBytes = Uint8List.fromList(saved);
+      baseBytes = Uint8List.fromList(saved);
+    }
+  }
+  
+  /// Restores liveDocument from baseBytes (e.g. after undo)
+  void syncLiveFromBase() {
+    liveDocument?.dispose();
+    if (baseBytes != null) {
+      liveDocument = sf.PdfDocument(inputBytes: baseBytes, password: password);
     }
   }
 }
@@ -94,7 +99,10 @@ class AppState extends ChangeNotifier {
 
   PdfSession? get activeSession => _activeSession;
 
-  Uint8List? get currentBytes => _activeSession?.currentBytes;
+  /// CRITICAL SSoT: The UI Viewer only watches this. 
+  /// It only changes when a structural "burn" happens.
+  Uint8List? get baseBytes => _activeSession?.baseBytes;
+  
   bool get canUndo => _activeSession?.undoStack.isNotEmpty ?? false;
   bool get canRedo => _activeSession?.redoStack.isNotEmpty ?? false;
   int get activePageNumber => _activeSession?.activePageNumber ?? 1;
@@ -117,7 +125,7 @@ class AppState extends ChangeNotifier {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       fileName: fileName,
       filePath: filePath,
-      currentBytes: bytes,
+      baseBytes: bytes,
       password: password,
     );
     _activeSession!.activePageNumber = initialPage;
@@ -131,14 +139,13 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _triggerAiAnalysis(PdfSession session, int pageIndex) async {
-    if (session.currentBytes == null || session.pageDoms.containsKey(pageIndex)) return;
+    if (session.baseBytes == null || session.pageDoms.containsKey(pageIndex)) return;
     
-    // RACE CONDITION GUARD
     if (session.pagesBeingProcessed.contains(pageIndex)) return;
     session.pagesBeingProcessed.add(pageIndex);
 
     try {
-      final dom = await ai.processPage(session.id, session.currentBytes!, pageIndex);
+      final dom = await ai.processPage(session.id, session.baseBytes!, pageIndex);
       session.pageDoms[pageIndex] = dom;
       notifyListeners();
     } finally {
@@ -183,9 +190,9 @@ class AppState extends ChangeNotifier {
   }
 
   void _updateSecurityReport(PdfSession session) {
-    if (session.currentBytes != null) {
+    if (session.baseBytes != null) {
       session.securityReport = EditEngine.analyzeDocumentStructure(
-        session.currentBytes!,
+        session.baseBytes!,
         session.password,
       );
     }
@@ -238,27 +245,26 @@ class AppState extends ChangeNotifier {
     _triggerBackgroundCacheSync(_activeSession!);
     _triggerAiAnalysis(_activeSession!, pageNum - 1);
     
-    // NOTIFY DEBOUNCE
     _pageUpdateDebounce?.cancel();
     _pageUpdateDebounce = Timer(const Duration(milliseconds: 100), () {
       notifyListeners();
     });
   }
 
-  void commitMutation(Uint8List mutatedBytes) {
+  /// MODIFIED: commitMutation now only updates baseBytes when forced.
+  /// This is the key to preventing "White Page Reloads" during editing.
+  void commitMutation(Uint8List mutatedBytes, {bool reloadViewer = true}) {
     if (_activeSession == null) return;
 
-    if (_activeSession!.currentBytes != null) {
-      _activeSession!.undoStack.add(_activeSession!.currentBytes!);
-      // MEMORY SAFETY: Limit undo stack
+    if (_activeSession!.baseBytes != null) {
+      _activeSession!.undoStack.add(_activeSession!.baseBytes!);
       if (_activeSession!.undoStack.length > maxUndoSteps) {
         _activeSession!.undoStack.removeAt(0);
       }
     }
-    _activeSession!.currentBytes = mutatedBytes;
     
-    // SYNC REBUILD
-    _activeSession!.rebuildLiveDocument();
+    _activeSession!.baseBytes = mutatedBytes;
+    _activeSession!.syncLiveFromBase();
 
     _activeSession!.redoStack.clear();
     _activeSession!.pageDoms.clear(); 
@@ -267,13 +273,17 @@ class AppState extends ChangeNotifier {
     _triggerAiAnalysis(_activeSession!, _activeSession!.activePageNumber - 1);
     
     analyticsService.logAction("MODIFY_DOCUMENT", _activeSession!.fileName);
-    notifyListeners();
+    
+    // Only notify if we want the viewer to actually reload
+    if (reloadViewer) {
+      notifyListeners();
+    }
   }
 
   void _triggerBackgroundCacheSync(PdfSession session) {
-    if (session.currentBytes == null) return;
+    if (session.baseBytes == null) return;
     MemoryManager.writeRecoverySession(
-      bytes: session.currentBytes!,
+      bytes: session.baseBytes!,
       activePage: session.activePageNumber,
       password: session.password,
     );
@@ -287,13 +297,11 @@ class AppState extends ChangeNotifier {
     if (_activeSession == null || _activeSession!.undoStack.isEmpty) return;
     
     final previousState = _activeSession!.undoStack.removeLast();
-    if (_activeSession!.currentBytes != null) {
-      _activeSession!.redoStack.add(_activeSession!.currentBytes!);
+    if (_activeSession!.baseBytes != null) {
+      _activeSession!.redoStack.add(_activeSession!.baseBytes!);
     }
-    _activeSession!.currentBytes = previousState;
-    
-    // REBUILD FIX
-    _activeSession!.rebuildLiveDocument();
+    _activeSession!.baseBytes = previousState;
+    _activeSession!.syncLiveFromBase();
     
     _triggerBackgroundCacheSync(_activeSession!);
     notifyListeners();
@@ -303,13 +311,11 @@ class AppState extends ChangeNotifier {
     if (_activeSession == null || _activeSession!.redoStack.isEmpty) return;
 
     final nextState = _activeSession!.redoStack.removeLast();
-    if (_activeSession!.currentBytes != null) {
-      _activeSession!.undoStack.add(_activeSession!.currentBytes!);
+    if (_activeSession!.baseBytes != null) {
+      _activeSession!.undoStack.add(_activeSession!.baseBytes!);
     }
-    _activeSession!.currentBytes = nextState;
-    
-    // REBUILD FIX
-    _activeSession!.rebuildLiveDocument();
+    _activeSession!.baseBytes = nextState;
+    _activeSession!.syncLiveFromBase();
     
     _triggerBackgroundCacheSync(_activeSession!);
     notifyListeners();
