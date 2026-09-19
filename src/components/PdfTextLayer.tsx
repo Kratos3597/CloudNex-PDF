@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 
 export interface TextLayerItem {
@@ -33,6 +33,7 @@ export const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
   isDrawingMode = false,
 }) => {
   const [textItems, setTextItems] = useState<TextLayerItem[]>([]);
+  const lastReportedKeyRef = useRef<string>('');
 
   useEffect(() => {
     if (!pdfBytes || currentPage < 1) return;
@@ -40,15 +41,23 @@ export const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
 
     const extractPageText = async () => {
       try {
-        const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+        // Clone buffer to prevent detaching shared ArrayBuffer
+        const loadingTask = pdfjsLib.getDocument({ data: pdfBytes.slice() });
         const pdfDoc = await loadingTask.promise;
-        if (currentPage > pdfDoc.numPages) return;
+        if (currentPage > pdfDoc.numPages) {
+          pdfDoc.destroy();
+          return;
+        }
 
         const page = await pdfDoc.getPage(currentPage);
         const viewport = page.getViewport({ scale: 1.0 });
         const textContent = await page.getTextContent();
 
-        if (isCancelled) return;
+        if (isCancelled) {
+          page.cleanup();
+          pdfDoc.destroy();
+          return;
+        }
 
         const items: TextLayerItem[] = [];
         const rawItems = textContent.items as any[];
@@ -82,9 +91,16 @@ export const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
           });
         });
 
-        setTextItems(items);
+        page.cleanup();
+        pdfDoc.destroy();
+
+        if (!isCancelled) {
+          setTextItems(items);
+        }
       } catch (err) {
-        console.error('Error extracting text layer items:', err);
+        if (!isCancelled) {
+          console.error('Error extracting text layer items:', err);
+        }
       }
     };
 
@@ -101,15 +117,18 @@ export const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
       .map(item => item.id);
   }, [textItems, searchQuery]);
 
-  // Report matches up to parent component
+  // Report matches up to parent component safely without infinite loops
   useEffect(() => {
     if (!onMatchesFound) return;
-    if (!searchQuery.trim()) {
-      onMatchesFound([]);
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) {
+      if (lastReportedKeyRef.current !== '') {
+        lastReportedKeyRef.current = '';
+        onMatchesFound([]);
+      }
       return;
     }
 
-    const q = searchQuery.toLowerCase().trim();
     const matched = textItems
       .filter(item => item.str.toLowerCase().includes(q))
       .map(item => ({
@@ -118,8 +137,12 @@ export const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
         page: currentPage,
       }));
 
-    onMatchesFound(matched);
-  }, [matchingItemIds, searchQuery, currentPage, onMatchesFound, textItems]);
+    const key = `${currentPage}:${matched.map(m => m.id).join(',')}`;
+    if (lastReportedKeyRef.current !== key) {
+      lastReportedKeyRef.current = key;
+      onMatchesFound(matched);
+    }
+  }, [searchQuery, currentPage, onMatchesFound, textItems]);
 
   if (textItems.length === 0) {
     return null;

@@ -14,7 +14,7 @@ export class OcrService {
     totalTextItems: number;
   }> {
     try {
-      const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+      const loadingTask = pdfjsLib.getDocument({ data: pdfBytes.slice() });
       const pdfDoc = await loadingTask.promise;
       const totalPages = pdfDoc.numPages;
       const scannedPages: number[] = [];
@@ -81,7 +81,7 @@ export class OcrService {
       message: 'Inspecting PDF text streams and raster images...',
     });
 
-    const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+    const loadingTask = pdfjsLib.getDocument({ data: pdfBytes.slice() });
     const pdfDoc = await loadingTask.promise;
     const totalPages = pdfDoc.numPages;
     const pageResults: OcrPageResult[] = [];

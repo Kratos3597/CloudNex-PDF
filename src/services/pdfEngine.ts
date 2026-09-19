@@ -256,7 +256,7 @@ export class PdfEngine {
     canvas: HTMLCanvasElement,
     scale: number = 1.3
   ): Promise<{ width: number; height: number }> {
-    const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+    const loadingTask = pdfjsLib.getDocument({ data: pdfBytes.slice() });
     const pdfDoc = await loadingTask.promise;
     const page = await pdfDoc.getPage(pageNumber);
 
@@ -690,7 +690,7 @@ export class PdfEngine {
    */
   static async renderThumbnail(pdfBytes: Uint8Array, pageNumber: number): Promise<string> {
     try {
-      const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+      const loadingTask = pdfjsLib.getDocument({ data: pdfBytes.slice() });
       const pdfDoc = await loadingTask.promise;
       const page = await pdfDoc.getPage(pageNumber);
       const viewport = page.getViewport({ scale: 0.35 });
@@ -715,7 +715,7 @@ export class PdfEngine {
    */
   static async extractText(pdfBytes: Uint8Array): Promise<string> {
     try {
-      const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+      const loadingTask = pdfjsLib.getDocument({ data: pdfBytes.slice() });
       const pdfDoc = await loadingTask.promise;
       let fullText = '';
 
@@ -891,7 +891,7 @@ export class PdfEngine {
    */
   static async extractAllText(pdfBytes: Uint8Array): Promise<string> {
     try {
-      const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+      const loadingTask = pdfjsLib.getDocument({ data: pdfBytes.slice() });
       const doc = await loadingTask.promise;
       const textParts: string[] = [];
       const maxPages = Math.min(doc.numPages, 10);
