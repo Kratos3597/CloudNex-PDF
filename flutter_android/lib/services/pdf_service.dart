@@ -10,7 +10,7 @@ class CloudNexPdfService {
   /// into the underlying vector PDF content stream.
   static Future<File> applySignatureAndFlatten({
     required List<int> originalPdfBytes,
-    required Uint8Array signaturePngBytes,
+    required Uint8List signaturePngBytes,
     required int pageIndex,
     required Rect boundingBox,
     required String outputFileName,

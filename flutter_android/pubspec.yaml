@@ -14,6 +14,9 @@ dependencies:
   syncfusion_flutter_pdf: ^28.2.9
   syncfusion_flutter_core: ^28.2.9
 
+  # OCR & Optical Recognition Engine
+  google_mlkit_text_recognition: ^0.14.0
+
   # Android Native Integration & Sharing
   path_provider: ^2.1.2
   share_plus: ^10.1.4

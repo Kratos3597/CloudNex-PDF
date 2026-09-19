@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:syncfusion_flutter_core/core.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'services/pdf_service.dart';
+import 'services/ocr_service.dart';
 import 'widgets/signature_pad.dart';
 
 void main() {
@@ -159,6 +160,60 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     }
   }
 
+  Future<void> _handleOcrScanImage() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png'],
+    );
+
+    if (result == null || result.files.single.path == null) return;
+
+    final imageFile = File(result.files.single.path!);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Processing OCR with Google ML Kit + Syncfusion...'),
+          backgroundColor: Color(0xFF0052CC),
+        ),
+      );
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final searchablePdf = await FlutterOcrService.createSearchablePdfFromImage(
+        imageFile: imageFile,
+        outputFileName: 'OCR_${imageFile.path.split('/').last.replaceAll(RegExp(r'\.[a-zA-Z]+$'), '')}.pdf',
+      );
+
+      setState(() {
+        _currentPdfFile = searchablePdf;
+        _documentTitle = searchablePdf.path.split('/').last;
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Searchable PDF created! Invisible OCR text stream injected with Syncfusion.'),
+            backgroundColor: Color(0xFF36B37E),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('OCR Failed: $e'),
+            backgroundColor: const Color(0xFFDE350B),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -179,6 +234,11 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.document_scanner, color: Color(0xFF0052CC)),
+            tooltip: 'OCR Image to Searchable PDF',
+            onPressed: _handleOcrScanImage,
+          ),
           IconButton(
             icon: const Icon(Icons.file_open, color: Color(0xFF0052CC)),
             tooltip: 'Open PDF',
