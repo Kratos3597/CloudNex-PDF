@@ -1,19 +1,23 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { 
   Upload, 
   GitMerge, 
   Activity, 
   FileText, 
-  MoreVertical, 
   Plus, 
   Clock, 
   Trash2,
   FolderOpen,
-  Share2
+  Share2,
+  ScanText,
+  Sparkles,
+  CheckCircle2
 } from 'lucide-react';
-import { DocumentRecord, TabType } from '../types';
+import { DocumentRecord, TabType, OcrProgressStatus } from '../types';
 import { StorageService } from '../services/storage';
 import { PdfEngine } from '../services/pdfEngine';
+import { OcrService } from '../services/ocrService';
+import { OcrProgressModal } from './OcrProgressModal';
 
 interface DashboardScreenProps {
   documents: DocumentRecord[];
@@ -31,29 +35,133 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mergeInputRef = useRef<HTMLInputElement>(null);
 
+  // OCR modal state
+  const [isOcrModalOpen, setIsOcrModalOpen] = useState(false);
+  const [ocrStatus, setOcrStatus] = useState<OcrProgressStatus | null>(null);
+  const [ocrFileName, setOcrFileName] = useState('');
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const arrayBuffer = await file.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    const report = await PdfEngine.analyzeDocument(bytes);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      const report = await PdfEngine.analyzeDocument(bytes);
 
-    const newDoc: DocumentRecord = {
-      id: `doc-${Date.now()}`,
-      fileName: file.name,
-      filePath: `/local/storage/${file.name}`,
-      lastOpenedDate: new Date().toISOString(),
-      lastOpenedPage: 1,
-      fileSize: `${(file.size / 1024).toFixed(1)} KB`,
-      pageCount: report.totalPages || 1,
-    };
+      // Check whether this PDF is a scanned image-based document (lacks text stream)
+      const detection = await OcrService.detectIsScannedDocument(bytes);
 
-    StorageService.saveDocument(newDoc, bytes);
-    StorageService.logAction('OPEN_DOCUMENT', newDoc.fileName);
-    onRefreshDocs();
-    onOpenDocument(newDoc);
+      let finalBytes = bytes;
+      let isScanned = detection.isScanned;
+      let ocrProcessed = false;
+      let ocrWordCount = 0;
+      let ocrConfidence = 0;
+      let searchableText = '';
+
+      if (isScanned) {
+        // Automatically run OCR conversion
+        setOcrFileName(file.name);
+        setIsOcrModalOpen(true);
+
+        const { convertedPdfBytes, ocrResult } = await OcrService.processScannedPdf(
+          bytes,
+          (status) => setOcrStatus(status)
+        );
+
+        finalBytes = new Uint8Array(convertedPdfBytes);
+        ocrProcessed = true;
+        ocrWordCount = ocrResult.totalWords;
+        ocrConfidence = ocrResult.averageConfidence;
+        searchableText = ocrResult.fullText;
+
+        // Brief delay so user sees 100% completion
+        await new Promise((r) => setTimeout(r, 600));
+        setIsOcrModalOpen(false);
+      }
+
+      const newDoc: DocumentRecord = {
+        id: `doc-${Date.now()}`,
+        fileName: file.name,
+        filePath: `/local/storage/${file.name}`,
+        lastOpenedDate: new Date().toISOString(),
+        lastOpenedPage: 1,
+        fileSize: `${(finalBytes.byteLength / 1024).toFixed(1)} KB`,
+        pageCount: report.totalPages || 1,
+        isScanned,
+        ocrProcessed,
+        ocrWordCount,
+        ocrConfidence,
+        searchableText,
+      };
+
+      StorageService.saveDocument(newDoc, finalBytes);
+      if (ocrProcessed) {
+        StorageService.logAction('OCR_CONVERT', newDoc.fileName);
+      } else {
+        StorageService.logAction('OPEN_DOCUMENT', newDoc.fileName);
+      }
+
+      onRefreshDocs();
+      onOpenDocument(newDoc);
+    } catch (err) {
+      console.error('File import or OCR error:', err);
+      setIsOcrModalOpen(false);
+      alert('Failed to process PDF document.');
+    }
     e.target.value = '';
+  };
+
+  const handleTestScannedSample = async () => {
+    try {
+      setOcrFileName('Scanned_Invoice_Sample.pdf');
+      setIsOcrModalOpen(true);
+      setOcrStatus({
+        status: 'detecting',
+        currentPage: 0,
+        totalPages: 1,
+        progress: 10,
+        message: 'Generating flatbed scanned raster PDF (0 digital text stream)...',
+      });
+
+      // 1. Create simulated authentic image-only scan
+      const { bytes, fileName } = await OcrService.createScannedSampleDocument('invoice');
+      setOcrFileName(fileName);
+
+      // 2. Automatically run OCR conversion
+      const { convertedPdfBytes, ocrResult } = await OcrService.processScannedPdf(
+        bytes,
+        (status) => setOcrStatus(status)
+      );
+
+      // Short pause for completed animation
+      await new Promise((r) => setTimeout(r, 700));
+      setIsOcrModalOpen(false);
+
+      const newDoc: DocumentRecord = {
+        id: `doc-${Date.now()}`,
+        fileName,
+        filePath: `/local/storage/${fileName}`,
+        lastOpenedDate: new Date().toISOString(),
+        lastOpenedPage: 1,
+        fileSize: `${(convertedPdfBytes.byteLength / 1024).toFixed(1)} KB`,
+        pageCount: 1,
+        isScanned: true,
+        ocrProcessed: true,
+        ocrWordCount: ocrResult.totalWords,
+        ocrConfidence: ocrResult.averageConfidence,
+        searchableText: ocrResult.fullText,
+      };
+
+      StorageService.saveDocument(newDoc, convertedPdfBytes);
+      StorageService.logAction('OCR_CONVERT', newDoc.fileName);
+      onRefreshDocs();
+      onOpenDocument(newDoc);
+    } catch (err) {
+      console.error('Error generating and converting scanned document:', err);
+      setIsOcrModalOpen(false);
+      alert('Failed to generate test scanned document.');
+    }
   };
 
   const handleMergeFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,7 +284,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         <h2 className="text-sm font-bold uppercase tracking-wider text-[#6B778C] mb-4">
           Quick Actions
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Upload Card */}
           <button
             id="quick-action-upload"
@@ -191,7 +299,29 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 Upload Document
               </h3>
               <p className="text-xs text-[#6B778C] mt-1">
-                Open and analyze PDF files from your device
+                Open & auto-detect scanned image PDFs
+              </p>
+            </div>
+          </button>
+
+          {/* Test Scanned PDF with Auto-OCR Card */}
+          <button
+            id="quick-action-test-ocr"
+            onClick={handleTestScannedSample}
+            className="bg-white p-5 rounded-xl border border-blue-200 shadow-sm hover:border-[#0052CC] hover:shadow-md transition-all text-left flex items-start gap-4 group cursor-pointer relative overflow-hidden"
+          >
+            <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-blue-100 text-[#0052CC] text-[9px] font-bold uppercase tracking-wider">
+              Auto-OCR
+            </div>
+            <div className="p-3 rounded-lg bg-blue-50 text-[#0052CC] group-hover:bg-[#0052CC] group-hover:text-white transition-colors shrink-0">
+              <ScanText className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-[#172B4D] text-sm group-hover:text-[#0052CC] transition-colors flex items-center gap-1.5">
+                <span>Test Scanned PDF</span>
+              </h3>
+              <p className="text-xs text-[#6B778C] mt-1">
+                Generate image scan & auto-convert to searchable text
               </p>
             </div>
           </button>
@@ -279,9 +409,20 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     <FileText className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="font-bold text-sm text-[#172B4D] truncate group-hover:text-[#0052CC] transition-colors">
-                      {doc.fileName}
-                    </h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-sm text-[#172B4D] truncate group-hover:text-[#0052CC] transition-colors">
+                        {doc.fileName}
+                      </h4>
+                      {doc.ocrProcessed && (
+                        <span 
+                          className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1 shrink-0"
+                          title={`OCR Converted: ${doc.ocrWordCount || 0} words (${doc.ocrConfidence || 95}% confidence)`}
+                        >
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Searchable</span>
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-3 text-xs text-[#6B778C] mt-1">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
@@ -314,6 +455,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           </div>
         )}
       </div>
+
+      {/* OCR Progress Modal */}
+      <OcrProgressModal
+        isOpen={isOcrModalOpen}
+        status={ocrStatus}
+        fileName={ocrFileName}
+      />
 
       {/* Floating Action Button */}
       <button

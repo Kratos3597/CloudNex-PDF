@@ -28,17 +28,24 @@ import {
   Menu,
   Square,
   Circle,
-  Minus
+  Minus,
+  ScanText,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
-import { DocumentRecord, ShadowObject, ShapeType, ActivePdfTool } from '../types';
+import { DocumentRecord, ShadowObject, ShapeType, ActivePdfTool, OcrProgressStatus } from '../types';
 import { PdfEngine } from '../services/pdfEngine';
 import { StorageService } from '../services/storage';
+import { OcrService } from '../services/ocrService';
 import { SignatureOverlay } from './SignatureOverlay';
 import { ShapeOverlay } from './ShapeOverlay';
 import { TextOverlay } from './TextOverlay';
 import { InkDrawingOverlay } from './InkDrawingOverlay';
 import { PageManagerModal } from './PageManagerModal';
 import { NeuralEditorModal } from './NeuralEditorModal';
+import { OcrInspectorModal } from './OcrInspectorModal';
+import { OcrProgressModal } from './OcrProgressModal';
+import { PdfTextLayer } from './PdfTextLayer';
 import { DeviceLayoutState, useDeviceLayout } from '../hooks/useDeviceLayout';
 
 interface EditorScreenProps {
@@ -59,15 +66,28 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   const fallbackLayout = useDeviceLayout();
   const activeLayout = layout || fallbackLayout;
 
+  const [currentDoc, setCurrentDoc] = useState<DocumentRecord>(document);
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [zoomScale, setZoomScale] = useState(activeLayout.suggestedPdfScale || 1.1);
+  const [canvasDims, setCanvasDims] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [isEditMode, setIsEditMode] = useState(false);
   const [activePdfTool, setActivePdfTool] = useState<ActivePdfTool>('none');
   const [currentShapeType, setCurrentShapeType] = useState<ShapeType>('rectangle');
   const [shadowObjects, setShadowObjects] = useState<ShadowObject[]>([]);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+
+  // In-document text search & highlight
+  const [isSearchBarOpen, setIsSearchBarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPageMatches, setCurrentPageMatches] = useState<{ id: string; str: string; page: number }[]>([]);
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0);
+
+  // OCR Inspector & Progress Modal state
+  const [isOcrInspectorOpen, setIsOcrInspectorOpen] = useState(false);
+  const [isOcrProgressOpen, setIsOcrProgressOpen] = useState(false);
+  const [ocrProgressStatus, setOcrProgressStatus] = useState<OcrProgressStatus | null>(null);
   
   // Modals & Panels
   const [isPageManagerOpen, setIsPageManagerOpen] = useState(false);
@@ -121,7 +141,10 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
 
     const render = async () => {
       try {
-        await PdfEngine.renderPageToCanvas(pdfBytes, currentPage, canvasRef.current!, zoomScale);
+        const dims = await PdfEngine.renderPageToCanvas(pdfBytes, currentPage, canvasRef.current!, zoomScale);
+        if (!isCancelled && dims) {
+          setCanvasDims(dims);
+        }
       } catch (e) {
         if (!isCancelled) console.error('Render page error:', e);
       }
@@ -129,6 +152,56 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
     render();
     return () => { isCancelled = true; };
   }, [pdfBytes, currentPage, zoomScale]);
+
+  // Global Ctrl+F / Cmd+F shortcut for in-document text search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setIsSearchBarOpen(true);
+      } else if (e.key === 'Escape' && isSearchBarOpen) {
+        setIsSearchBarOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSearchBarOpen]);
+
+  // On-demand OCR run for current document
+  const handleRunOcr = async () => {
+    if (!pdfBytes) return;
+    try {
+      setIsOcrProgressOpen(true);
+      const { convertedPdfBytes, ocrResult } = await OcrService.processScannedPdf(
+        pdfBytes,
+        (status) => setOcrProgressStatus(status)
+      );
+
+      const updatedDoc: DocumentRecord = {
+        ...currentDoc,
+        isScanned: true,
+        ocrProcessed: true,
+        ocrWordCount: ocrResult.totalWords,
+        ocrConfidence: ocrResult.averageConfidence,
+        searchableText: ocrResult.fullText,
+      };
+
+      setPdfBytes(convertedPdfBytes);
+      setCurrentDoc(updatedDoc);
+      StorageService.saveDocument(updatedDoc, convertedPdfBytes);
+      StorageService.logAction('OCR_CONVERT', updatedDoc.fileName);
+      onRefreshDocs();
+
+      await new Promise((r) => setTimeout(r, 600));
+      setIsOcrProgressOpen(false);
+      setSaveToast(`OCR Complete: ${ocrResult.totalWords} words recognized & injected as selectable text!`);
+      setTimeout(() => setSaveToast(null), 4000);
+    } catch (err) {
+      console.error('Error running OCR on document:', err);
+      setIsOcrProgressOpen(false);
+      alert('OCR processing failed.');
+    }
+  };
 
   // Pre-render page thumbnails for the tablet landscape rail
   useEffect(() => {
@@ -528,6 +601,41 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
             </button>
           </div>
 
+          {/* Find in Document Button */}
+          <button
+            id="editor-btn-find"
+            onClick={() => setIsSearchBarOpen(prev => !prev)}
+            className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
+              isSearchBarOpen
+                ? 'bg-amber-100 text-amber-900 border-amber-300'
+                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 border-gray-200 bg-white'
+            }`}
+            title="Search / Find text in PDF (Ctrl+F)"
+          >
+            <Search className="w-3.5 h-3.5 text-amber-700" />
+            <span className="hidden sm:inline">Find</span>
+          </button>
+
+          {/* OCR Status & Inspector Button */}
+          <button
+            id="editor-btn-ocr-inspector"
+            onClick={() => setIsOcrInspectorOpen(true)}
+            className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
+              currentDoc.ocrProcessed
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+            }`}
+            title="Inspect recognized OCR text & run OCR on demand"
+          >
+            <ScanText className={`w-3.5 h-3.5 ${currentDoc.ocrProcessed ? 'text-emerald-600' : 'text-[#0052CC]'}`} />
+            <span className="hidden sm:inline">
+              {currentDoc.ocrProcessed ? 'OCR Ready' : 'OCR'}
+            </span>
+            {currentDoc.ocrProcessed && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            )}
+          </button>
+
           {/* Share Button (Native Android Share Sheet / Download) */}
           <button
             id="editor-share-btn"
@@ -553,6 +661,92 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
           )}
         </div>
       </header>
+
+      {/* Sleek Inline Find Bar */}
+      {isSearchBarOpen && (
+        <div 
+          id="editor-find-bar" 
+          className="h-10 bg-amber-50/95 border-b border-amber-200 px-4 flex items-center justify-between z-30 text-xs text-amber-950 shadow-xs"
+        >
+          <div className="flex items-center gap-2 flex-1 max-w-lg">
+            <Search className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+            <input
+              id="editor-find-input"
+              type="text"
+              autoFocus
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setActiveMatchIndex(0);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (e.shiftKey) {
+                    if (currentPageMatches.length > 0) {
+                      setActiveMatchIndex(prev => (prev - 1 + currentPageMatches.length) % currentPageMatches.length);
+                    }
+                  } else {
+                    if (currentPageMatches.length > 0) {
+                      setActiveMatchIndex(prev => (prev + 1) % currentPageMatches.length);
+                    }
+                  }
+                }
+              }}
+              placeholder="Find in page text (Enter for next, Shift+Enter for prev)..."
+              className="w-full bg-white border border-amber-300 rounded px-2.5 py-1 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-medium text-amber-800">
+              {searchQuery.trim()
+                ? currentPageMatches.length > 0
+                  ? `${activeMatchIndex + 1} of ${currentPageMatches.length} on page ${currentPage}`
+                  : '0 matches on this page'
+                : 'Search selectable text layer'}
+            </span>
+
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => {
+                  if (currentPageMatches.length > 0) {
+                    setActiveMatchIndex(prev => (prev - 1 + currentPageMatches.length) % currentPageMatches.length);
+                  }
+                }}
+                disabled={currentPageMatches.length <= 1}
+                className="p-1 rounded hover:bg-amber-200/70 text-amber-900 disabled:opacity-40 cursor-pointer"
+                title="Previous Match (Shift+Enter)"
+              >
+                <ChevronUp className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => {
+                  if (currentPageMatches.length > 0) {
+                    setActiveMatchIndex(prev => (prev + 1) % currentPageMatches.length);
+                  }
+                }}
+                disabled={currentPageMatches.length <= 1}
+                className="p-1 rounded hover:bg-amber-200/70 text-amber-900 disabled:opacity-40 cursor-pointer"
+                title="Next Match (Enter)"
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <button
+              onClick={() => {
+                setIsSearchBarOpen(false);
+                setSearchQuery('');
+              }}
+              className="p-1 rounded hover:bg-amber-200/70 text-amber-800 cursor-pointer ml-1"
+              title="Close Search (Esc)"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Sleek Tool Action Strip (Modern single-tier toolbar without ribbon tabs) */}
       {isEditMode && !activeLayout.isPhonePortrait && (
@@ -666,6 +860,16 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
             >
               <Sparkles className="w-3.5 h-3.5 text-[#0052CC]" />
               <span>AI Edit</span>
+            </button>
+
+            <button
+              id="tool-btn-ocr-text"
+              onClick={() => setIsOcrInspectorOpen(true)}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold text-gray-700 hover:text-[#0052CC] hover:bg-blue-50 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Inspect OCR text layer & run OCR on demand"
+            >
+              <ScanText className="w-3.5 h-3.5 text-[#0052CC]" />
+              <span>OCR Text</span>
             </button>
 
             <button
@@ -791,6 +995,25 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
               ref={canvasRef}
               className="block max-w-full h-auto"
             />
+
+            {/* Searchable and Selectable PDF Text Layer with Highlights */}
+            {pdfBytes && canvasDims.width > 0 && (
+              <PdfTextLayer
+                pdfBytes={pdfBytes}
+                currentPage={currentPage}
+                canvasWidth={canvasDims.width}
+                canvasHeight={canvasDims.height}
+                searchQuery={searchQuery}
+                activeMatchIndex={activeMatchIndex}
+                onMatchesFound={(matches) => setCurrentPageMatches(matches)}
+                isDrawingMode={
+                  activePdfTool === 'ink' ||
+                  activePdfTool === 'shape' ||
+                  activePdfTool === 'signaturePlacement' ||
+                  activePdfTool === 'textPlacement'
+                }
+              />
+            )}
 
           {/* Render Active Shadow Objects for current page */}
           {shadowObjects
@@ -1058,6 +1281,24 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
 
             <div className="grid grid-cols-2 gap-2.5">
               <button
+                onClick={() => { setIsSearchBarOpen(true); setIsMobileToolsOpen(false); }}
+                className="p-3 rounded-xl border border-gray-200 hover:border-amber-400 hover:bg-amber-50/50 flex flex-col items-start gap-1.5 text-left cursor-pointer transition-colors"
+              >
+                <Search className="w-5 h-5 text-amber-700" />
+                <span className="font-bold text-xs text-[#172B4D]">Find in PDF</span>
+                <span className="text-[10px] text-gray-500">Search text occurrences</span>
+              </button>
+
+              <button
+                onClick={() => { setIsOcrInspectorOpen(true); setIsMobileToolsOpen(false); }}
+                className="p-3 rounded-xl border border-gray-200 hover:border-emerald-400 hover:bg-emerald-50/50 flex flex-col items-start gap-1.5 text-left cursor-pointer transition-colors"
+              >
+                <ScanText className="w-5 h-5 text-emerald-600" />
+                <span className="font-bold text-xs text-[#172B4D]">OCR Text Layer</span>
+                <span className="text-[10px] text-gray-500">Inspect & run OCR</span>
+              </button>
+
+              <button
                 onClick={() => { setIsPageManagerOpen(true); setIsMobileToolsOpen(false); }}
                 className="p-3 rounded-xl border border-gray-200 hover:border-[#0052CC] hover:bg-blue-50/50 flex flex-col items-start gap-1.5 text-left cursor-pointer transition-colors"
               >
@@ -1200,6 +1441,22 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
           }}
         />
       )}
+
+      {/* OCR Text Inspector Modal */}
+      <OcrInspectorModal
+        isOpen={isOcrInspectorOpen}
+        onClose={() => setIsOcrInspectorOpen(false)}
+        document={currentDoc}
+        onRunOcr={handleRunOcr}
+        isProcessing={isOcrProgressOpen}
+      />
+
+      {/* OCR Progress Modal */}
+      <OcrProgressModal
+        isOpen={isOcrProgressOpen}
+        status={ocrProgressStatus}
+        fileName={currentDoc.fileName}
+      />
     </div>
   );
 };

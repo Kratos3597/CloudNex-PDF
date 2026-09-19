@@ -157,6 +157,7 @@ export class StorageService {
       EXPORT_DOCUMENT: 0,
       MERGE_DOCUMENTS: 0,
       SIGN_DOCUMENT: 0,
+      OCR_CONVERT: 0,
     };
 
     for (const log of logs) {
