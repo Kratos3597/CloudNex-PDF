@@ -1,6 +1,6 @@
 {
   "name": "CloudNex PDF Pro",
-  "description": "Professional PDF suite with automated OCR text recognition, AI-powered auto-tagging into smart folders, touch editing, digital signatures, and page management.",
+  "description": "Professional PDF suite with automated OCR text recognition, precision touch editing, digital signatures, page management, and document organization.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

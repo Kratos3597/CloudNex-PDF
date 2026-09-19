@@ -9,7 +9,6 @@ import {
   Share2,
   ScanText,
   CheckCircle2,
-  Sparkles,
   Folder,
   Tag,
   X,
@@ -19,9 +18,7 @@ import { DocumentRecord, OcrProgressStatus } from '../types';
 import { StorageService } from '../services/storage';
 import { PdfEngine } from '../services/pdfEngine';
 import { OcrService } from '../services/ocrService';
-import { AiClassifierService } from '../services/aiClassifier';
 import { OcrProgressModal } from './OcrProgressModal';
-import { AutoTagModal } from './AutoTagModal';
 
 interface LibraryScreenProps {
   documents: DocumentRecord[];
@@ -37,9 +34,6 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolder, setSelectedFolder] = useState<string>('All');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [autoTagDoc, setAutoTagDoc] = useState<DocumentRecord | null>(null);
-  const [isAutoTagModalOpen, setIsAutoTagModalOpen] = useState(false);
-  const [isGeneratingSample, setIsGeneratingSample] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // OCR modal state
@@ -111,25 +105,8 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({
         searchableText = await PdfEngine.extractAllText(finalBytes);
       }
 
-      // Automatically run AI Auto-Tagging
-      let folder = 'Reports & Notes';
-      let tags = ['#document'];
-      let aiCategoryConfidence = 85;
-      let aiSummary = '';
-      let aiReasoning = '';
-      let aiEngine: 'gemini' | 'heuristic' = 'heuristic';
-
-      try {
-        const classification = await AiClassifierService.classifyDocument(searchableText, file.name);
-        folder = classification.folder;
-        tags = classification.tags;
-        aiCategoryConfidence = classification.confidence;
-        aiSummary = classification.summary;
-        aiReasoning = classification.reasoning || '';
-        aiEngine = classification.engine;
-      } catch (err) {
-        console.warn('AI classification fallback:', err);
-      }
+      const folder = 'Reports & Notes';
+      const tags = ['#document'];
 
       const newDoc: DocumentRecord = {
         id: `doc-${Date.now()}`,
@@ -146,11 +123,6 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({
         searchableText,
         folder,
         tags,
-        aiCategoryConfidence,
-        aiSummary,
-        aiReasoning,
-        aiEngine,
-        autoTaggedAt: new Date().toISOString(),
       };
 
       StorageService.saveDocument(newDoc, finalBytes);
@@ -159,7 +131,6 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({
       } else {
         StorageService.logAction('OPEN_DOCUMENT', newDoc.fileName);
       }
-      StorageService.logAction('AUTO_TAG_DOCUMENT', newDoc.fileName);
 
       onRefreshDocs();
       onOpenDocument(newDoc);
@@ -194,24 +165,8 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({
       await new Promise((r) => setTimeout(r, 700));
       setIsOcrModalOpen(false);
 
-      let folder = 'Invoices';
-      let tags = ['#invoice', '#billing', '#accounts-payable'];
-      let aiCategoryConfidence = 98;
-      let aiSummary = 'Scanned invoice document recognized and converted via automated OCR.';
-      let aiReasoning = 'Contains itemized expenses, line items, and invoice keywords.';
-      let aiEngine: 'gemini' | 'heuristic' = 'gemini';
-
-      try {
-        const classification = await AiClassifierService.classifyDocument(ocrResult.fullText, fileName);
-        folder = classification.folder;
-        tags = classification.tags;
-        aiCategoryConfidence = classification.confidence;
-        aiSummary = classification.summary;
-        aiReasoning = classification.reasoning || '';
-        aiEngine = classification.engine;
-      } catch (err) {
-        console.warn('AI classification fallback:', err);
-      }
+      const folder = 'Invoices';
+      const tags = ['#invoice', '#billing', '#scanned'];
 
       const newDoc: DocumentRecord = {
         id: `doc-${Date.now()}`,
@@ -228,80 +183,16 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({
         searchableText: ocrResult.fullText,
         folder,
         tags,
-        aiCategoryConfidence,
-        aiSummary,
-        aiReasoning,
-        aiEngine,
-        autoTaggedAt: new Date().toISOString(),
       };
 
       StorageService.saveDocument(newDoc, convertedPdfBytes);
       StorageService.logAction('OCR_CONVERT', newDoc.fileName);
-      StorageService.logAction('AUTO_TAG_DOCUMENT', newDoc.fileName);
       onRefreshDocs();
       onOpenDocument(newDoc);
     } catch (err) {
       console.error('Error in test scan & classify:', err);
       setIsOcrModalOpen(false);
       alert('Failed to generate test scanned document.');
-    }
-  };
-
-  const handleGenerateSampleCategory = async (category: 'invoice' | 'contract' | 'identity') => {
-    try {
-      setIsGeneratingSample(true);
-      let bytes: Uint8Array;
-      let fileName: string;
-      let defaultFolder: string;
-      let tags: string[];
-
-      if (category === 'invoice') {
-        bytes = await PdfEngine.createInvoiceSampleDocument();
-        fileName = `AWS_Cloud_Invoice_${Date.now().toString().slice(-4)}.pdf`;
-        defaultFolder = 'Invoices';
-        tags = ['#invoice', '#billing', '#cloud-compute'];
-      } else if (category === 'contract') {
-        bytes = await PdfEngine.createContractSampleDocument();
-        fileName = `Vendor_Agreement_${Date.now().toString().slice(-4)}.pdf`;
-        defaultFolder = 'Contracts';
-        tags = ['#contract', '#legal-agreement', '#terms'];
-      } else {
-        bytes = await PdfEngine.createIdentitySampleDocument();
-        fileName = `Passport_ID_Verification_${Date.now().toString().slice(-4)}.pdf`;
-        defaultFolder = 'Identity';
-        tags = ['#identity', '#gov-id', '#kyc-verified'];
-      }
-
-      const text = await PdfEngine.extractAllText(bytes);
-      const classification = await AiClassifierService.classifyDocument(text, fileName);
-
-      const newDoc: DocumentRecord = {
-        id: `doc-${Date.now()}`,
-        fileName,
-        filePath: `/storage/cloudnex/${classification.folder}/${fileName}`,
-        lastOpenedDate: new Date().toISOString(),
-        lastOpenedPage: 1,
-        fileSize: `${(bytes.byteLength / 1024).toFixed(1)} KB`,
-        pageCount: 1,
-        searchableText: text,
-        folder: classification.folder || defaultFolder,
-        tags: classification.tags.length > 0 ? classification.tags : tags,
-        aiCategoryConfidence: classification.confidence,
-        aiSummary: classification.summary,
-        aiReasoning: classification.reasoning,
-        aiEngine: classification.engine,
-        autoTaggedAt: new Date().toISOString(),
-      };
-
-      StorageService.saveDocument(newDoc, bytes);
-      StorageService.logAction('AUTO_TAG_DOCUMENT', newDoc.fileName);
-      onRefreshDocs();
-      onOpenDocument(newDoc);
-    } catch (e) {
-      console.error('Error generating sample:', e);
-      alert('Failed to generate document sample.');
-    } finally {
-      setIsGeneratingSample(false);
     }
   };
 
@@ -365,7 +256,7 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            AI-powered document categorization, smart auto-tagging, and post-OCR full-text search
+            Document library, category folders, and searchable post-OCR text
           </p>
         </div>
 
@@ -373,7 +264,7 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({
           <button
             onClick={handleTestScannedSample}
             className="px-3.5 py-2.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-800 text-xs font-semibold rounded-xl shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer min-h-[44px]"
-            title="Generate a realistic image-only scan, OCR it, and auto-tag into Invoices"
+            title="Generate a realistic image-only scan, OCR it, and organize into Invoices"
           >
             <ScanText className="w-4 h-4" />
             <span>Test Scanned Invoice</span>
@@ -385,52 +276,6 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({
           >
             <Plus className="w-4 h-4" />
             <span>Upload PDF</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Fast 1-Tap Category Test Showcase */}
-      <div className="bg-gradient-to-r from-blue-50/70 via-indigo-50/70 to-purple-50/70 dark:from-slate-900 dark:via-slate-850 dark:to-slate-900 rounded-2xl p-4 border border-blue-100/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-            <Sparkles className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="font-bold text-slate-800 dark:text-slate-200 block">
-              Quick Test AI Categorization into Folders
-            </span>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">
-              Injects realistic OCR text and triggers Gemini smart auto-tagging
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            disabled={isGeneratingSample}
-            onClick={() => handleGenerateSampleCategory('invoice')}
-            className="px-3.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-750 border border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-300 rounded-xl font-bold min-h-[38px] flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs disabled:opacity-50"
-          >
-            <span className="w-2 h-2 rounded-full bg-blue-500" />
-            + Invoice
-          </button>
-          <button
-            type="button"
-            disabled={isGeneratingSample}
-            onClick={() => handleGenerateSampleCategory('contract')}
-            className="px-3.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-slate-750 border border-purple-200 dark:border-purple-900/50 text-purple-700 dark:text-purple-300 rounded-xl font-bold min-h-[38px] flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs disabled:opacity-50"
-          >
-            <span className="w-2 h-2 rounded-full bg-purple-500" />
-            + Contract
-          </button>
-          <button
-            type="button"
-            disabled={isGeneratingSample}
-            onClick={() => handleGenerateSampleCategory('identity')}
-            className="px-3.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-slate-750 border border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-300 rounded-xl font-bold min-h-[38px] flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs disabled:opacity-50"
-          >
-            <span className="w-2 h-2 rounded-full bg-amber-500" />
-            + Identity
           </button>
         </div>
       </div>
@@ -477,7 +322,7 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({
           {availableFolders.map((folderName) => {
             const count = documents.filter((d) => d.folder === folderName).length;
             const isSelected = selectedFolder === folderName;
-            const style = AiClassifierService.getFolderStyle(folderName);
+            const style = StorageService.getFolderStyle(folderName);
             return (
               <button
                 key={folderName}
@@ -556,7 +401,7 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs overflow-hidden">
           <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
             {filteredDocs.map((doc) => {
-              const folderStyle = AiClassifierService.getFolderStyle(doc.folder || 'Reports & Notes');
+              const folderStyle = StorageService.getFolderStyle(doc.folder || 'Reports & Notes');
               return (
                 <div
                   key={doc.id}
@@ -610,11 +455,6 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({
                             {tag}
                           </button>
                         ))}
-                        {doc.aiCategoryConfidence && (
-                          <span className="text-[10px] text-slate-400 font-medium ml-1">
-                            ({doc.aiCategoryConfidence}% confidence)
-                          </span>
-                        )}
                       </div>
 
                       {searchQuery && doc.searchableText && doc.searchableText.toLowerCase().includes(searchQuery.toLowerCase()) && (
@@ -637,18 +477,6 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({
                     </div>
 
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setAutoTagDoc(doc);
-                          setIsAutoTagModalOpen(true);
-                        }}
-                        className="p-2.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-slate-800 rounded-xl min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors cursor-pointer"
-                        title="Review AI tags and folder classification"
-                      >
-                        <Sparkles className="w-4 h-4" />
-                      </button>
                       <button
                         type="button"
                         onClick={(e) => handleShare(e, doc)}
@@ -686,16 +514,6 @@ export const LibraryScreen: React.FC<LibraryScreenProps> = ({
         isOpen={isOcrModalOpen}
         status={ocrStatus}
         fileName={ocrFileName}
-      />
-
-      {/* AI Auto-Tag & Categorization Modal */}
-      <AutoTagModal
-        isOpen={isAutoTagModalOpen}
-        onClose={() => setIsAutoTagModalOpen(false)}
-        document={autoTagDoc}
-        onDocumentUpdated={() => {
-          onRefreshDocs();
-        }}
       />
     </div>
   );

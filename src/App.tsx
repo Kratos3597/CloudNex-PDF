@@ -110,7 +110,7 @@ export const App: React.FC = () => {
               </span>
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal truncate hidden sm:block">
-              Modern PDF Studio & AI Document Engine
+              Professional PDF Studio
             </p>
           </div>
         </div>

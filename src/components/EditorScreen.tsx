@@ -42,13 +42,11 @@ import { ShapeOverlay } from './ShapeOverlay';
 import { TextOverlay } from './TextOverlay';
 import { InkDrawingOverlay } from './InkDrawingOverlay';
 import { PageManagerModal } from './PageManagerModal';
-import { NeuralEditorModal } from './NeuralEditorModal';
 import { OcrInspectorModal } from './OcrInspectorModal';
 import { OcrProgressModal } from './OcrProgressModal';
-import { AutoTagModal } from './AutoTagModal';
-import { AiClassifierService } from '../services/aiClassifier';
 import { PdfTextLayer } from './PdfTextLayer';
 import { DeviceLayoutState, useDeviceLayout } from '../hooks/useDeviceLayout';
+import { usePinchToZoom } from '../hooks/usePinchToZoom';
 
 interface EditorScreenProps {
   document: DocumentRecord;
@@ -91,12 +89,8 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   const [isOcrProgressOpen, setIsOcrProgressOpen] = useState(false);
   const [ocrProgressStatus, setOcrProgressStatus] = useState<OcrProgressStatus | null>(null);
   
-  // AI Auto-Tag Modal state
-  const [isAutoTagModalOpen, setIsAutoTagModalOpen] = useState(false);
-  
   // Modals & Panels
   const [isPageManagerOpen, setIsPageManagerOpen] = useState(false);
-  const [isNeuralEditorOpen, setIsNeuralEditorOpen] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
 
@@ -107,6 +101,19 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Multi-touch pinch-to-zoom hook for tablets and mobile devices
+  const { isPinching, pinchScale } = usePinchToZoom({
+    containerRef,
+    targetRef: canvasWrapperRef,
+    zoomScale,
+    setZoomScale,
+    minScale: 0.45,
+    maxScale: 3.5,
+    defaultScale: activeLayout.suggestedPdfScale || 1.1,
+    disabled: isPageManagerOpen || showExportModal,
+  });
 
   // Synchronize layout changes with suggested zoom & thumbnail rail
   useEffect(() => {
@@ -182,25 +189,6 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
         (status) => setOcrProgressStatus(status)
       );
 
-      let folder = currentDoc.folder || 'Reports & Notes';
-      let tags = currentDoc.tags || ['#document'];
-      let aiCategoryConfidence = currentDoc.aiCategoryConfidence || 85;
-      let aiSummary = currentDoc.aiSummary || '';
-      let aiReasoning = currentDoc.aiReasoning || '';
-      let aiEngine = currentDoc.aiEngine || 'heuristic';
-
-      try {
-        const classification = await AiClassifierService.classifyDocument(ocrResult.fullText, currentDoc.fileName);
-        folder = classification.folder;
-        tags = classification.tags;
-        aiCategoryConfidence = classification.confidence;
-        aiSummary = classification.summary;
-        aiReasoning = classification.reasoning;
-        aiEngine = classification.engine;
-      } catch (err) {
-        console.warn('AI classification fallback after OCR:', err);
-      }
-
       const updatedDoc: DocumentRecord = {
         ...currentDoc,
         isScanned: true,
@@ -208,25 +196,17 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
         ocrWordCount: ocrResult.totalWords,
         ocrConfidence: ocrResult.averageConfidence,
         searchableText: ocrResult.fullText,
-        folder,
-        tags,
-        aiCategoryConfidence,
-        aiSummary,
-        aiReasoning,
-        aiEngine,
-        autoTaggedAt: new Date().toISOString(),
       };
 
       setPdfBytes(convertedPdfBytes);
       setCurrentDoc(updatedDoc);
       StorageService.saveDocument(updatedDoc, convertedPdfBytes);
       StorageService.logAction('OCR_CONVERT', updatedDoc.fileName);
-      StorageService.logAction('AUTO_TAG_DOCUMENT', updatedDoc.fileName);
       onRefreshDocs();
 
       await new Promise((r) => setTimeout(r, 600));
       setIsOcrProgressOpen(false);
-      setSaveToast(`OCR Complete: ${ocrResult.totalWords} words recognized & auto-tagged into ${folder}!`);
+      setSaveToast(`OCR Complete: ${ocrResult.totalWords} words recognized with full-text search layer ready!`);
       setTimeout(() => setSaveToast(null), 4000);
     } catch (err) {
       console.error('Error running OCR on document:', err);
@@ -567,7 +547,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
               </button>
             </div>
 
-            <div className="hidden lg:flex items-center bg-gray-100 rounded-lg p-1 text-xs">
+            <div className="hidden sm:flex items-center bg-gray-100 rounded-lg p-1 text-xs">
               <button
                 onClick={() => setZoomScale(s => Math.max(0.4, s - 0.15))}
                 className="p-1 rounded hover:bg-white transition-colors cursor-pointer"
@@ -666,23 +646,6 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
             {currentDoc.ocrProcessed && (
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             )}
-          </button>
-
-          {/* AI Auto-Tag / Folder Button */}
-          <button
-            id="editor-btn-auto-tag"
-            onClick={() => setIsAutoTagModalOpen(true)}
-            className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
-              currentDoc.folder
-                ? 'bg-indigo-50 text-indigo-800 border-indigo-200 hover:bg-indigo-100'
-                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
-            }`}
-            title="Review AI folder categorization and tags"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-            <span className="hidden sm:inline">
-              {currentDoc.folder || 'Auto-Tag'}
-            </span>
           </button>
 
           {/* Share Button (Native Android Share Sheet / Download) */}
@@ -902,16 +865,6 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
             </button>
 
             <button
-              id="tool-btn-neural"
-              onClick={() => setIsNeuralEditorOpen(true)}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold text-gray-700 hover:text-[#0052CC] hover:bg-blue-50 flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Neural OCR & Text Replacement"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-[#0052CC]" />
-              <span>AI Edit</span>
-            </button>
-
-            <button
               id="tool-btn-ocr-text"
               onClick={() => setIsOcrInspectorOpen(true)}
               className="px-2.5 py-1 rounded-lg text-xs font-semibold text-gray-700 hover:text-[#0052CC] hover:bg-blue-50 flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1028,15 +981,27 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
           </button>
         )}
 
-        {/* Main PDF Canvas Viewport */}
+        {/* Main PDF Canvas Viewport with Tablet Multi-touch Gestures */}
         <main 
           ref={containerRef}
-          className={`flex-1 overflow-auto flex items-center justify-center relative bg-[#EBECF0] transition-all ${
+          className={`flex-1 overflow-auto flex items-center justify-center relative bg-[#EBECF0] transition-all select-none ${
             activeLayout.isPhonePortrait ? 'p-2 sm:p-4 pb-28' : 'p-4 sm:p-8'
           }`}
+          style={{
+            touchAction: isPinching ? 'none' : 'pan-x pan-y',
+          }}
         >
+          {/* Tablet & Touch Multi-Touch Pinch Zoom Floating HUD Badge */}
+          {isPinching && (
+            <div className="fixed sm:absolute top-20 sm:top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2 bg-slate-900/90 text-white backdrop-blur-md rounded-full text-xs font-bold shadow-xl flex items-center gap-2 border border-slate-700/60 pointer-events-none transition-all animate-pulse">
+              <ZoomIn className="w-4 h-4 text-blue-400" />
+              <span>Pinch Zoom: {Math.round(pinchScale * 100)}%</span>
+            </div>
+          )}
+
           <div 
             id="pdf-canvas-wrapper" 
+            ref={canvasWrapperRef}
             className="relative shadow-2xl bg-white rounded border border-gray-300 transition-all duration-150 max-w-full"
           >
             {/* The PDF rendering canvas */}
@@ -1357,12 +1322,12 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
               </button>
 
               <button
-                onClick={() => { setIsNeuralEditorOpen(true); setIsMobileToolsOpen(false); }}
+                onClick={() => { setIsOcrInspectorOpen(true); setIsMobileToolsOpen(false); }}
                 className="p-3 rounded-xl border border-gray-200 hover:border-[#0052CC] hover:bg-blue-50/50 flex flex-col items-start gap-1.5 text-left cursor-pointer transition-colors"
               >
-                <Sparkles className="w-5 h-5 text-[#0052CC]" />
-                <span className="font-bold text-xs text-[#172B4D]">Neural Edit</span>
-                <span className="text-[10px] text-gray-500">OCR & text replace</span>
+                <ScanText className="w-5 h-5 text-[#0052CC]" />
+                <span className="font-bold text-xs text-[#172B4D]">OCR Text Layer</span>
+                <span className="text-[10px] text-gray-500">Inspect & run OCR</span>
               </button>
 
               <button
@@ -1475,22 +1440,6 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
         />
       )}
 
-      {/* Neural Editor Modal */}
-      {pdfBytes && (
-        <NeuralEditorModal
-          pdfBytes={pdfBytes}
-          activePageIndex={currentPage - 1}
-          isOpen={isNeuralEditorOpen}
-          onClose={() => setIsNeuralEditorOpen(false)}
-          onApply={(updated) => {
-            setPdfBytes(updated);
-            StorageService.saveDocument(document, updated);
-            StorageService.logAction('MODIFY_DOCUMENT', document.fileName);
-            showNotification('Text replaced via Neural Reconstruction!');
-          }}
-        />
-      )}
-
       {/* OCR Text Inspector Modal */}
       <OcrInspectorModal
         isOpen={isOcrInspectorOpen}
@@ -1505,18 +1454,6 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
         isOpen={isOcrProgressOpen}
         status={ocrProgressStatus}
         fileName={currentDoc.fileName}
-      />
-
-      {/* AI Auto-Tag & Categorization Modal */}
-      <AutoTagModal
-        isOpen={isAutoTagModalOpen}
-        onClose={() => setIsAutoTagModalOpen(false)}
-        document={currentDoc}
-        onDocumentUpdated={(updated) => {
-          setCurrentDoc(updated);
-          onRefreshDocs();
-          showNotification(`Document updated: Folder set to "${updated.folder}"`);
-        }}
       />
     </div>
   );

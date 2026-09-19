@@ -293,4 +293,60 @@ export class StorageService {
   static saveSyncfusionKey(key: string): void {
     localStorage.setItem(STORAGE_KEYS.SYNCFUSION_KEY, key.trim());
   }
+
+  static getFolderStyle(folderName: string) {
+    const f = (folderName || '').toLowerCase();
+    if (f.includes('invoice') || f.includes('bill')) {
+      return {
+        bg: 'bg-blue-50',
+        text: 'text-blue-700',
+        border: 'border-blue-200',
+        badgeBg: 'bg-blue-100 text-blue-800',
+        dotColor: 'bg-blue-500',
+      };
+    }
+    if (f.includes('contract')) {
+      return {
+        bg: 'bg-purple-50',
+        text: 'text-purple-700',
+        border: 'border-purple-200',
+        badgeBg: 'bg-purple-100 text-purple-800',
+        dotColor: 'bg-purple-500',
+      };
+    }
+    if (f.includes('identity')) {
+      return {
+        bg: 'bg-amber-50',
+        text: 'text-amber-800',
+        border: 'border-amber-200',
+        badgeBg: 'bg-amber-100 text-amber-900',
+        dotColor: 'bg-amber-500',
+      };
+    }
+    if (f.includes('financial') || f.includes('tax')) {
+      return {
+        bg: 'bg-emerald-50',
+        text: 'text-emerald-700',
+        border: 'border-emerald-200',
+        badgeBg: 'bg-emerald-100 text-emerald-800',
+        dotColor: 'bg-emerald-500',
+      };
+    }
+    if (f.includes('receipt')) {
+      return {
+        bg: 'bg-teal-50',
+        text: 'text-teal-700',
+        border: 'border-teal-200',
+        badgeBg: 'bg-teal-100 text-teal-800',
+        dotColor: 'bg-teal-500',
+      };
+    }
+    return {
+      bg: 'bg-gray-50',
+      text: 'text-gray-700',
+      border: 'border-gray-200',
+      badgeBg: 'bg-gray-100 text-gray-800',
+      dotColor: 'bg-gray-400',
+    };
+  }
 }
