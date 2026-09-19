@@ -29,6 +29,30 @@ export interface ShadowObject {
   pageIndex: number;
 }
 
+export type StandardFolder = 
+  | 'Invoices' 
+  | 'Contracts' 
+  | 'Identity' 
+  | 'Financial & Tax' 
+  | 'Receipts' 
+  | 'Reports & Notes'
+  | 'Uncategorized';
+
+export interface AiClassificationResult {
+  folder: string;
+  tags: string[];
+  confidence: number;
+  summary: string;
+  reasoning?: string;
+  metadata?: {
+    date?: string;
+    amount?: string;
+    parties?: string[];
+    referenceId?: string;
+  };
+  engine: 'gemini' | 'heuristic';
+}
+
 export interface DocumentRecord {
   id: string;
   fileName: string;
@@ -43,11 +67,25 @@ export interface DocumentRecord {
   ocrWordCount?: number;
   ocrConfidence?: number;
   searchableText?: string;
+  // AI Categorization & Tagging
+  folder?: string;
+  tags?: string[];
+  aiCategoryConfidence?: number;
+  aiSummary?: string;
+  aiReasoning?: string;
+  aiMetadata?: {
+    date?: string;
+    amount?: string;
+    parties?: string[];
+    referenceId?: string;
+  };
+  aiEngine?: 'gemini' | 'heuristic';
+  autoTaggedAt?: string;
 }
 
 export interface AuditEntry {
   id: string;
-  action: 'OPEN_DOCUMENT' | 'MODIFY_DOCUMENT' | 'EXPORT_DOCUMENT' | 'EXPORT_EXCEL' | 'EXPORT_WORD' | 'MERGE_DOCUMENTS' | 'SIGN_DOCUMENT' | 'OCR_CONVERT';
+  action: 'OPEN_DOCUMENT' | 'MODIFY_DOCUMENT' | 'EXPORT_DOCUMENT' | 'EXPORT_EXCEL' | 'EXPORT_WORD' | 'MERGE_DOCUMENTS' | 'SIGN_DOCUMENT' | 'OCR_CONVERT' | 'AUTO_TAG_DOCUMENT' | 'MOVE_FOLDER';
   documentName: string;
   timestamp: string;
   user: string;

@@ -45,6 +45,8 @@ import { PageManagerModal } from './PageManagerModal';
 import { NeuralEditorModal } from './NeuralEditorModal';
 import { OcrInspectorModal } from './OcrInspectorModal';
 import { OcrProgressModal } from './OcrProgressModal';
+import { AutoTagModal } from './AutoTagModal';
+import { AiClassifierService } from '../services/aiClassifier';
 import { PdfTextLayer } from './PdfTextLayer';
 import { DeviceLayoutState, useDeviceLayout } from '../hooks/useDeviceLayout';
 
@@ -88,6 +90,9 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   const [isOcrInspectorOpen, setIsOcrInspectorOpen] = useState(false);
   const [isOcrProgressOpen, setIsOcrProgressOpen] = useState(false);
   const [ocrProgressStatus, setOcrProgressStatus] = useState<OcrProgressStatus | null>(null);
+  
+  // AI Auto-Tag Modal state
+  const [isAutoTagModalOpen, setIsAutoTagModalOpen] = useState(false);
   
   // Modals & Panels
   const [isPageManagerOpen, setIsPageManagerOpen] = useState(false);
@@ -177,6 +182,25 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
         (status) => setOcrProgressStatus(status)
       );
 
+      let folder = currentDoc.folder || 'Reports & Notes';
+      let tags = currentDoc.tags || ['#document'];
+      let aiCategoryConfidence = currentDoc.aiCategoryConfidence || 85;
+      let aiSummary = currentDoc.aiSummary || '';
+      let aiReasoning = currentDoc.aiReasoning || '';
+      let aiEngine = currentDoc.aiEngine || 'heuristic';
+
+      try {
+        const classification = await AiClassifierService.classifyDocument(ocrResult.fullText, currentDoc.fileName);
+        folder = classification.folder;
+        tags = classification.tags;
+        aiCategoryConfidence = classification.confidence;
+        aiSummary = classification.summary;
+        aiReasoning = classification.reasoning;
+        aiEngine = classification.engine;
+      } catch (err) {
+        console.warn('AI classification fallback after OCR:', err);
+      }
+
       const updatedDoc: DocumentRecord = {
         ...currentDoc,
         isScanned: true,
@@ -184,17 +208,25 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
         ocrWordCount: ocrResult.totalWords,
         ocrConfidence: ocrResult.averageConfidence,
         searchableText: ocrResult.fullText,
+        folder,
+        tags,
+        aiCategoryConfidence,
+        aiSummary,
+        aiReasoning,
+        aiEngine,
+        autoTaggedAt: new Date().toISOString(),
       };
 
       setPdfBytes(convertedPdfBytes);
       setCurrentDoc(updatedDoc);
       StorageService.saveDocument(updatedDoc, convertedPdfBytes);
       StorageService.logAction('OCR_CONVERT', updatedDoc.fileName);
+      StorageService.logAction('AUTO_TAG_DOCUMENT', updatedDoc.fileName);
       onRefreshDocs();
 
       await new Promise((r) => setTimeout(r, 600));
       setIsOcrProgressOpen(false);
-      setSaveToast(`OCR Complete: ${ocrResult.totalWords} words recognized & injected as selectable text!`);
+      setSaveToast(`OCR Complete: ${ocrResult.totalWords} words recognized & auto-tagged into ${folder}!`);
       setTimeout(() => setSaveToast(null), 4000);
     } catch (err) {
       console.error('Error running OCR on document:', err);
@@ -634,6 +666,23 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
             {currentDoc.ocrProcessed && (
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             )}
+          </button>
+
+          {/* AI Auto-Tag / Folder Button */}
+          <button
+            id="editor-btn-auto-tag"
+            onClick={() => setIsAutoTagModalOpen(true)}
+            className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
+              currentDoc.folder
+                ? 'bg-indigo-50 text-indigo-800 border-indigo-200 hover:bg-indigo-100'
+                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+            }`}
+            title="Review AI folder categorization and tags"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+            <span className="hidden sm:inline">
+              {currentDoc.folder || 'Auto-Tag'}
+            </span>
           </button>
 
           {/* Share Button (Native Android Share Sheet / Download) */}
@@ -1456,6 +1505,18 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
         isOpen={isOcrProgressOpen}
         status={ocrProgressStatus}
         fileName={currentDoc.fileName}
+      />
+
+      {/* AI Auto-Tag & Categorization Modal */}
+      <AutoTagModal
+        isOpen={isAutoTagModalOpen}
+        onClose={() => setIsAutoTagModalOpen(false)}
+        document={currentDoc}
+        onDocumentUpdated={(updated) => {
+          setCurrentDoc(updated);
+          onRefreshDocs();
+          showNotification(`Document updated: Folder set to "${updated.folder}"`);
+        }}
       />
     </div>
   );

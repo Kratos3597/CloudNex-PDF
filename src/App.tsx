@@ -64,7 +64,7 @@ export const App: React.FC = () => {
   // If a document is active, display the full EditorScreen
   if (activeDocument) {
     return (
-      <div className={isDarkMode ? 'dark bg-zinc-950 text-zinc-100' : 'bg-[#F4F5F7] text-[#172B4D]'}>
+      <div className={isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}>
         <StatusCapsule status={syncStatus} isLoading={isSyncLoading} />
         <EditorScreen
           document={activeDocument}
@@ -81,69 +81,75 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col ${isDarkMode ? 'dark bg-zinc-950 text-zinc-100' : 'bg-[#F4F5F7] text-[#172B4D]'}`}>
-      {/* Top Punch-hole / Dynamic Status Capsule */}
+    <div className={`min-h-screen flex flex-col font-sans ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50/70 text-slate-900'}`}>
+      {/* Top Dynamic Status Capsule */}
       <StatusCapsule status={syncStatus} isLoading={isSyncLoading} />
 
-      {/* Main Corporate Header */}
-      <header className={`h-16 border-b px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs backdrop-blur-md ${
-        isDarkMode ? 'bg-zinc-900/90 border-zinc-800' : 'bg-white/90 border-gray-200'
+      {/* Main Modern Studio Header */}
+      <header className={`h-16 border-b px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 backdrop-blur-md transition-colors ${
+        isDarkMode 
+          ? 'bg-slate-900/85 border-slate-800 shadow-sm' 
+          : 'bg-white/85 border-slate-200/80 shadow-xs'
       }`}>
         {/* Brand & Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#0052CC] flex items-center justify-center text-white shadow-md shadow-[#0052CC]/25 shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-600/20 shrink-0">
             <FileText className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-base tracking-tight text-[#172B4D] dark:text-white">
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">
                 CloudNex
               </span>
-              <span className="bg-[#0052CC] text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded">
+              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md tracking-wider uppercase shadow-2xs">
                 PRO
               </span>
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-medium border border-slate-200/60 dark:border-slate-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {documents.length} Docs
+              </span>
             </div>
-            <p className="text-[10px] text-[#6B778C] dark:text-zinc-400 -mt-0.5 font-medium truncate hidden sm:block">
-              Enterprise Document Management & Signatures
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal truncate hidden sm:block">
+              Modern PDF Studio & AI Document Engine
             </p>
           </div>
         </div>
 
         {/* Navigation Tabs (Desktop) */}
-        <nav aria-label="Main navigation" className="hidden lg:flex items-center gap-1 bg-gray-100 dark:bg-zinc-800 p-1 rounded-xl">
+        <nav aria-label="Main navigation" className="hidden lg:flex items-center gap-1 bg-slate-100/90 dark:bg-slate-850 p-1 rounded-xl border border-slate-200/60 dark:border-slate-800">
           <button
             id="nav-tab-home"
             onClick={() => setActiveTab('home')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'home'
-                ? 'bg-white dark:bg-zinc-700 text-[#0052CC] dark:text-white shadow-xs'
-                : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-2xs border border-slate-200/50 dark:border-slate-700'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Home className="w-3.5 h-3.5" />
-            <span>Home</span>
+            <span>Studio</span>
           </button>
 
           <button
             id="nav-tab-files"
             onClick={() => setActiveTab('files')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'files'
-                ? 'bg-white dark:bg-zinc-700 text-[#0052CC] dark:text-white shadow-xs'
-                : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-2xs border border-slate-200/50 dark:border-slate-700'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Folder className="w-3.5 h-3.5" />
-            <span>Files</span>
+            <span>Library</span>
           </button>
 
           <button
             id="nav-tab-activity"
             onClick={() => setActiveTab('activity')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'activity'
-                ? 'bg-white dark:bg-zinc-700 text-[#0052CC] dark:text-white shadow-xs'
-                : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-2xs border border-slate-200/50 dark:border-slate-700'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Activity className="w-3.5 h-3.5" />
@@ -153,14 +159,14 @@ export const App: React.FC = () => {
           <button
             id="nav-tab-profile"
             onClick={() => setActiveTab('profile')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'profile'
-                ? 'bg-white dark:bg-zinc-700 text-[#0052CC] dark:text-white shadow-xs'
-                : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-2xs border border-slate-200/50 dark:border-slate-700'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <User className="w-3.5 h-3.5" />
-            <span>Signature Vault</span>
+            <span>Vault</span>
           </button>
         </nav>
 
@@ -168,10 +174,10 @@ export const App: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsDarkMode(d => !d)}
-            className="p-2 rounded-xl border border-gray-200 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-300 transition-colors cursor-pointer"
+            className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
             title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
-            {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
           </button>
         </div>
       </header>
@@ -205,49 +211,49 @@ export const App: React.FC = () => {
       </main>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav aria-label="Mobile navigation" className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-zinc-900 border-t border-gray-200 dark:border-zinc-800 flex items-center justify-around z-30 shadow-lg">
+      <nav aria-label="Mobile navigation" className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-around z-30 shadow-lg">
         <button
           id="mobile-tab-home"
           onClick={() => setActiveTab('home')}
-          className={`flex flex-col items-center gap-1 cursor-pointer ${
-            activeTab === 'home' ? 'text-[#0052CC]' : 'text-gray-500'
+          className={`flex flex-col items-center gap-1 min-h-[44px] justify-center px-3 cursor-pointer transition-colors ${
+            activeTab === 'home' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
           }`}
         >
           <Home className="w-4 h-4" />
-          <span className="text-[10px] font-bold">Home</span>
+          <span className="text-[10px]">Studio</span>
         </button>
 
         <button
           id="mobile-tab-files"
           onClick={() => setActiveTab('files')}
-          className={`flex flex-col items-center gap-1 cursor-pointer ${
-            activeTab === 'files' ? 'text-[#0052CC]' : 'text-gray-500'
+          className={`flex flex-col items-center gap-1 min-h-[44px] justify-center px-3 cursor-pointer transition-colors ${
+            activeTab === 'files' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
           }`}
         >
           <Folder className="w-4 h-4" />
-          <span className="text-[10px] font-bold">Files</span>
+          <span className="text-[10px]">Library</span>
         </button>
 
         <button
           id="mobile-tab-activity"
           onClick={() => setActiveTab('activity')}
-          className={`flex flex-col items-center gap-1 cursor-pointer ${
-            activeTab === 'activity' ? 'text-[#0052CC]' : 'text-gray-500'
+          className={`flex flex-col items-center gap-1 min-h-[44px] justify-center px-3 cursor-pointer transition-colors ${
+            activeTab === 'activity' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
           }`}
         >
           <Activity className="w-4 h-4" />
-          <span className="text-[10px] font-bold">Activity</span>
+          <span className="text-[10px]">Activity</span>
         </button>
 
         <button
           id="mobile-tab-profile"
           onClick={() => setActiveTab('profile')}
-          className={`flex flex-col items-center gap-1 cursor-pointer ${
-            activeTab === 'profile' ? 'text-[#0052CC]' : 'text-gray-500'
+          className={`flex flex-col items-center gap-1 min-h-[44px] justify-center px-3 cursor-pointer transition-colors ${
+            activeTab === 'profile' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
           }`}
         >
           <User className="w-4 h-4" />
-          <span className="text-[10px] font-bold">Vault</span>
+          <span className="text-[10px]">Vault</span>
         </button>
       </nav>
     </div>

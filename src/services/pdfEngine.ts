@@ -357,8 +357,8 @@ export class PdfEngine {
       });
 
       page.drawText(
-        'Engineered for Syncfusion Hardware Acceleration: Large Heap 512MB Allocation Active\n' +
-        'Vector paths rendered at 60 FPS across both native Android Impeller and WebGL layers.\n' +
+        'Engineered for High-Performance Cloud Acceleration: Large Heap 512MB Allocation Active\n' +
+        'Vector paths rendered at 60 FPS across both native mobile and high-DPI display layers.\n' +
         'Signature & Annotation flattening verified for tamper-proof digital verification.',
         {
           x: 80,
@@ -389,7 +389,7 @@ export class PdfEngine {
         color: rgb(54 / 255, 179 / 255, 126 / 255),
       });
 
-      page.drawText(`ISO/IEC 32000-1 Compliant\nSyncfusion Engine Verified\nTimestamp: 2026-09-19`, {
+      page.drawText(`ISO/IEC 32000-1 Compliant\nSecurity Engine Verified\nTimestamp: 2026-09-19`, {
         x: width - 225,
         y: 102,
         size: 8,
@@ -399,6 +399,289 @@ export class PdfEngine {
       });
     }
 
+    return await doc.save();
+  }
+
+  /**
+   * Generates an authentic sample invoice document
+   */
+  static async createInvoiceSampleDocument(): Promise<Uint8Array> {
+    const doc = await PDFDocument.create();
+    const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+    const fontRegular = await doc.embedFont(StandardFonts.Helvetica);
+    const page = doc.addPage([595.28, 841.89]);
+    const { width, height } = page.getSize();
+
+    page.drawRectangle({
+      x: 0,
+      y: height - 100,
+      width,
+      height: 100,
+      color: rgb(0 / 255, 82 / 255, 204 / 255),
+    });
+
+    page.drawText('ACME CLOUD SERVICES, INC.', {
+      x: 40,
+      y: height - 45,
+      size: 14,
+      font: fontBold,
+      color: rgb(1, 1, 1),
+    });
+    page.drawText('TAX INVOICE & BILLING STATEMENT', {
+      x: 40,
+      y: height - 70,
+      size: 18,
+      font: fontBold,
+      color: rgb(1, 1, 1),
+    });
+
+    page.drawText('Invoice Number: INV-2026-90412', { x: 40, y: height - 130, size: 10, font: fontBold, color: rgb(0.1, 0.17, 0.3) });
+    page.drawText('Invoice Date: September 15, 2026', { x: 40, y: height - 148, size: 9, font: fontRegular, color: rgb(0.3, 0.35, 0.4) });
+    page.drawText('Payment Due Date: October 15, 2026 (Net 30)', { x: 40, y: height - 164, size: 9, font: fontBold, color: rgb(0.7, 0.1, 0.1) });
+
+    page.drawText('BILL TO:', { x: 340, y: height - 130, size: 9, font: fontBold, color: rgb(0.1, 0.17, 0.3) });
+    page.drawText('CloudNex Global Enterprise\n100 Technology Plaza, Suite 400\nSan Francisco, CA 94105\nTax ID: US-94-2849102', {
+      x: 340,
+      y: height - 148,
+      size: 8.5,
+      font: fontRegular,
+      color: rgb(0.2, 0.25, 0.3),
+      lineHeight: 12,
+    });
+
+    page.drawRectangle({
+      x: 40,
+      y: height - 230,
+      width: width - 80,
+      height: 24,
+      color: rgb(0.92, 0.95, 0.99),
+    });
+    page.drawText('ITEM DESCRIPTION', { x: 50, y: height - 222, size: 9, font: fontBold, color: rgb(0.1, 0.17, 0.3) });
+    page.drawText('QTY', { x: 330, y: height - 222, size: 9, font: fontBold, color: rgb(0.1, 0.17, 0.3) });
+    page.drawText('UNIT PRICE', { x: 390, y: height - 222, size: 9, font: fontBold, color: rgb(0.1, 0.17, 0.3) });
+    page.drawText('AMOUNT DUE', { x: 470, y: height - 222, size: 9, font: fontBold, color: rgb(0.1, 0.17, 0.3) });
+
+    const items = [
+      { desc: 'Managed Kubernetes Cluster Dedicated Compute', qty: '1', price: '$2,400.00', total: '$2,400.00' },
+      { desc: 'High-Throughput NVMe Object Storage (10 TB)', qty: '10', price: '$120.00', total: '$1,200.00' },
+      { desc: 'Cloud CDN Global Edge Transfer & SSL Offload', qty: '1', price: '$350.00', total: '$350.00' },
+      { desc: 'Enterprise 24/7 SLA Technical Support Retainer', qty: '1', price: '$170.00', total: '$170.00' },
+    ];
+
+    let rowY = height - 255;
+    for (const item of items) {
+      page.drawText(item.desc, { x: 50, y: rowY, size: 8.5, font: fontRegular, color: rgb(0.15, 0.2, 0.25) });
+      page.drawText(item.qty, { x: 335, y: rowY, size: 8.5, font: fontRegular, color: rgb(0.15, 0.2, 0.25) });
+      page.drawText(item.price, { x: 395, y: rowY, size: 8.5, font: fontRegular, color: rgb(0.15, 0.2, 0.25) });
+      page.drawText(item.total, { x: 475, y: rowY, size: 8.5, font: fontBold, color: rgb(0.15, 0.2, 0.25) });
+      page.drawLine({ start: { x: 40, y: rowY - 8 }, end: { x: width - 40, y: rowY - 8 }, thickness: 0.5, color: rgb(0.9, 0.92, 0.94) });
+      rowY -= 30;
+    }
+
+    page.drawRectangle({
+      x: 340,
+      y: rowY - 70,
+      width: width - 380,
+      height: 70,
+      color: rgb(0.97, 0.98, 1),
+      borderColor: rgb(0, 82 / 255, 204 / 255),
+      borderWidth: 1,
+    });
+    page.drawText('Subtotal: $4,120.00', { x: 355, y: rowY - 20, size: 9, font: fontRegular, color: rgb(0.2, 0.25, 0.3) });
+    page.drawText('Sales Tax (0.00% Exempt): $0.00', { x: 355, y: rowY - 36, size: 8.5, font: fontRegular, color: rgb(0.4, 0.45, 0.5) });
+    page.drawText('Total Balance Due: $4,120.00', { x: 355, y: rowY - 56, size: 11, font: fontBold, color: rgb(0, 82 / 255, 204 / 255) });
+
+    page.drawText('Remit Payment To: ACME Banking N.A. | Account #4819-2049-11 | Routing #021000021\nTerms: All invoices payable in USD within 30 days of billing date.', {
+      x: 40,
+      y: 80,
+      size: 8,
+      font: fontRegular,
+      color: rgb(0.4, 0.45, 0.5),
+      lineHeight: 12,
+    });
+
+    doc.setTitle('AWS_Cloud_Invoice_2026.pdf');
+    return await doc.save();
+  }
+
+  /**
+   * Generates an authentic sample contract document
+   */
+  static async createContractSampleDocument(): Promise<Uint8Array> {
+    const doc = await PDFDocument.create();
+    const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+    const fontRegular = await doc.embedFont(StandardFonts.Helvetica);
+    const page = doc.addPage([595.28, 841.89]);
+    const { width, height } = page.getSize();
+
+    page.drawText('MASTER SERVICES AGREEMENT & NON-DISCLOSURE CONTRACT', {
+      x: 40,
+      y: height - 60,
+      size: 13,
+      font: fontBold,
+      color: rgb(0.1, 0.17, 0.3),
+    });
+    page.drawText('Document Reference: MSA-CNX-2026-081 | Legally Binding Instrument', {
+      x: 40,
+      y: height - 80,
+      size: 9,
+      font: fontRegular,
+      color: rgb(0.4, 0.45, 0.5),
+    });
+
+    const clauses = [
+      'This Master Services Agreement ("Agreement") is entered into and made effective as of September 1, 2026 ("Effective Date"), by and between CloudNex Systems LLC ("Service Provider") and Enterprise Partner Corp ("Client").',
+      '1. SCOPE OF SERVICES: Service Provider agrees to deliver enterprise architecture, high-availability data replication, and digital document workflows in accordance with Exhibit A (Scope of Work).',
+      '2. CONFIDENTIALITY & NON-DISCLOSURE: Each party agrees that all software code, business plans, financial records, and operational designs disclosed hereunder shall remain strictly confidential ("Proprietary Information") and protected under governing trade secret laws.',
+      '3. TERM & TERMINATION: This Agreement shall commence upon the Effective Date and remain in full force for an initial term of twenty-four (24) calendar months. Either party may terminate with thirty (30) days written notice.',
+      '4. INDEMNIFICATION & LIABILITY: Each party agrees to defend, indemnify, and hold harmless the other party against any third-party claims arising from gross negligence or intentional misconduct.',
+      '5. GOVERNING LAW & JURISDICTION: This Agreement shall be governed by and construed in accordance with the laws of the State of Delaware, without regard to conflict of laws principles.',
+      'IN WITNESS WHEREOF, the authorized representatives of the parties have executed this Agreement as of the date first written above.',
+    ];
+
+    let clauseY = height - 120;
+    for (const clause of clauses) {
+      page.drawText(clause, {
+        x: 40,
+        y: clauseY,
+        size: 8.5,
+        font: fontRegular,
+        color: rgb(0.15, 0.2, 0.25),
+        lineHeight: 13,
+        maxWidth: width - 80,
+      });
+      clauseY -= 55;
+    }
+
+    page.drawRectangle({
+      x: 40,
+      y: 70,
+      width: 220,
+      height: 60,
+      borderColor: rgb(0.7, 0.75, 0.8),
+      borderWidth: 1,
+      color: rgb(0.98, 0.98, 0.99),
+    });
+    page.drawText('CloudNex Authorized Signatory:', { x: 48, y: 118, size: 8, font: fontBold, color: rgb(0.3, 0.35, 0.4) });
+    page.drawText('Status: Digitally Signed & Verified', { x: 48, y: 88, size: 8, font: fontRegular, color: rgb(0.1, 0.6, 0.3) });
+
+    page.drawRectangle({
+      x: 300,
+      y: 70,
+      width: 220,
+      height: 60,
+      borderColor: rgb(0.7, 0.75, 0.8),
+      borderWidth: 1,
+      color: rgb(0.98, 0.98, 0.99),
+    });
+    page.drawText('Client Executive Signatory:', { x: 308, y: 118, size: 8, font: fontBold, color: rgb(0.3, 0.35, 0.4) });
+    page.drawText('Status: Pending Counter-Signature', { x: 308, y: 88, size: 8, font: fontRegular, color: rgb(0.7, 0.4, 0.1) });
+
+    doc.setTitle('Enterprise_Vendor_Agreement.pdf');
+    return await doc.save();
+  }
+
+  /**
+   * Generates an authentic sample identity credential document
+   */
+  static async createIdentitySampleDocument(): Promise<Uint8Array> {
+    const doc = await PDFDocument.create();
+    const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+    const fontRegular = await doc.embedFont(StandardFonts.Helvetica);
+    const page = doc.addPage([595.28, 841.89]);
+    const { width, height } = page.getSize();
+
+    page.drawRectangle({
+      x: 0,
+      y: height - 90,
+      width,
+      height: 90,
+      color: rgb(0.08, 0.18, 0.35),
+    });
+    page.drawText('OFFICIAL IDENTITY CREDENTIAL & VERIFICATION RECORD', {
+      x: 40,
+      y: height - 45,
+      size: 13,
+      font: fontBold,
+      color: rgb(1, 1, 1),
+    });
+    page.drawText('Department of Records & Compliance | KYC Certified Authentication', {
+      x: 40,
+      y: height - 68,
+      size: 9,
+      font: fontRegular,
+      color: rgb(0.8, 0.88, 1),
+    });
+
+    page.drawRectangle({
+      x: 40,
+      y: height - 340,
+      width: width - 80,
+      height: 220,
+      color: rgb(0.97, 0.98, 0.99),
+      borderColor: rgb(0.08, 0.18, 0.35),
+      borderWidth: 1.5,
+    });
+
+    page.drawRectangle({
+      x: 60,
+      y: height - 310,
+      width: 120,
+      height: 160,
+      color: rgb(0.9, 0.93, 0.96),
+      borderColor: rgb(0.7, 0.75, 0.8),
+      borderWidth: 1,
+    });
+    page.drawText('BIOMETRIC\nPHOTO ID\nVERIFIED', {
+      x: 88,
+      y: height - 220,
+      size: 9,
+      font: fontBold,
+      color: rgb(0.3, 0.35, 0.45),
+      lineHeight: 14,
+    });
+
+    const idFields = [
+      { label: 'Document Type:', val: 'PASSPORT / CITIZENSHIP RECORD' },
+      { label: 'Document No:', val: 'P-984210492-USA' },
+      { label: 'Full Legal Name:', val: 'ALEXANDER REID MORGAN' },
+      { label: 'Date of Birth (DOB):', val: 'MAY 14, 1988' },
+      { label: 'Nationality / Citizenship:', val: 'UNITED STATES OF AMERICA' },
+      { label: 'Sex:', val: 'M' },
+      { label: 'Date of Issue:', val: 'OCTOBER 10, 2021' },
+      { label: 'Date of Expiration:', val: 'OCTOBER 10, 2031' },
+    ];
+
+    let fieldY = height - 160;
+    for (const f of idFields) {
+      page.drawText(f.label, { x: 200, y: fieldY, size: 8.5, font: fontBold, color: rgb(0.2, 0.25, 0.35) });
+      page.drawText(f.val, { x: 330, y: fieldY, size: 8.5, font: fontRegular, color: rgb(0.08, 0.12, 0.2) });
+      fieldY -= 20;
+    }
+
+    page.drawRectangle({
+      x: 40,
+      y: 100,
+      width: width - 80,
+      height: 60,
+      color: rgb(0.94, 0.95, 0.97),
+    });
+    page.drawText('P<USAMORGAN<<ALEXANDER<REID<<<<<<<<<<<<<<<<<<<<', {
+      x: 55,
+      y: 135,
+      size: 10,
+      font: fontBold,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    page.drawText('9842104925USA8805148M3110107<<<<<<<<<<<<<<<04', {
+      x: 55,
+      y: 115,
+      size: 10,
+      font: fontBold,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+
+    doc.setTitle('Employee_Passport_Verification.pdf');
     return await doc.save();
   }
 
@@ -601,6 +884,32 @@ export class PdfEngine {
     if (meta.subject) doc.setSubject(meta.subject);
     if (meta.keywords) doc.setKeywords([meta.keywords]);
     return await doc.save();
+  }
+
+  /**
+   * Extracts text content across all pages using PDF.js text layer
+   */
+  static async extractAllText(pdfBytes: Uint8Array): Promise<string> {
+    try {
+      const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+      const doc = await loadingTask.promise;
+      const textParts: string[] = [];
+      const maxPages = Math.min(doc.numPages, 10);
+      for (let i = 1; i <= maxPages; i++) {
+        const page = await doc.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageStr = textContent.items
+          .map((item: any) => ('str' in item ? item.str : ''))
+          .join(' ');
+        if (pageStr.trim()) {
+          textParts.push(pageStr);
+        }
+      }
+      return textParts.join('\n');
+    } catch (e) {
+      console.warn('Text extraction failed:', e);
+      return '';
+    }
   }
 
   /**

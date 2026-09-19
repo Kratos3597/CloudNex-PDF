@@ -22,45 +22,95 @@ export class StorageService {
     if (existing.length > 0) return existing;
 
     try {
-      // Create initial sample documents
-      const sample1Bytes = await PdfEngine.createSampleDocument(
-        'Enterprise SLA & Architecture Spec',
-        'Confidential System Specification & Cloud Integrity'
-      );
-      const sample2Bytes = await PdfEngine.createSampleDocument(
-        'Quarterly Financial Disclosures & Audit',
-        'Financial Reporting and Executive Approval Matrix'
-      );
+      // Create initial specialized sample documents for Invoices, Contracts, Identity, and Reports
+      const [invoiceBytes, contractBytes, identityBytes, specBytes] = await Promise.all([
+        PdfEngine.createInvoiceSampleDocument(),
+        PdfEngine.createContractSampleDocument(),
+        PdfEngine.createIdentitySampleDocument(),
+        PdfEngine.createSampleDocument('Enterprise Architecture Spec', 'Cloud Engineering & Security Guidelines'),
+      ]);
 
       const doc1: DocumentRecord = {
-        id: 'doc-1',
-        fileName: 'Enterprise_SLA_Spec.pdf',
-        filePath: '/storage/cloudnex/Enterprise_SLA_Spec.pdf',
+        id: 'doc-invoice-1',
+        fileName: 'AWS_Cloud_Invoice_2026.pdf',
+        filePath: '/storage/cloudnex/Invoices/AWS_Cloud_Invoice_2026.pdf',
         lastOpenedDate: new Date().toISOString(),
         lastOpenedPage: 1,
-        fileSize: '48.2 KB',
-        pageCount: 2,
+        fileSize: `${(invoiceBytes.byteLength / 1024).toFixed(1)} KB`,
+        pageCount: 1,
+        folder: 'Invoices',
+        tags: ['#invoice', '#billing', '#cloud-compute', '#net-30'],
+        aiCategoryConfidence: 98,
+        aiSummary: 'Tax invoice for AWS & Kubernetes compute infrastructure totaling $4,120.00.',
+        aiReasoning: 'Detected itemized line items, bill-to metadata, and due date.',
+        aiEngine: 'gemini',
+        autoTaggedAt: new Date().toISOString(),
       };
 
       const doc2: DocumentRecord = {
-        id: 'doc-2',
-        fileName: 'Quarterly_Financial_Report.pdf',
-        filePath: '/storage/cloudnex/Quarterly_Financial_Report.pdf',
-        lastOpenedDate: new Date(Date.now() - 3600000 * 24).toISOString(),
+        id: 'doc-contract-1',
+        fileName: 'Enterprise_Vendor_Agreement.pdf',
+        filePath: '/storage/cloudnex/Contracts/Enterprise_Vendor_Agreement.pdf',
+        lastOpenedDate: new Date(Date.now() - 3600000 * 12).toISOString(),
         lastOpenedPage: 1,
-        fileSize: '51.8 KB',
-        pageCount: 2,
+        fileSize: `${(contractBytes.byteLength / 1024).toFixed(1)} KB`,
+        pageCount: 1,
+        folder: 'Contracts',
+        tags: ['#contract', '#legal-agreement', '#terms', '#binding', '#nda'],
+        aiCategoryConfidence: 99,
+        aiSummary: 'Master Services Agreement & NDA for enterprise architecture services.',
+        aiReasoning: 'Detected binding legal clauses, non-disclosure terms, and signature blocks.',
+        aiEngine: 'gemini',
+        autoTaggedAt: new Date().toISOString(),
       };
 
-      memoryDocumentBytes.set(doc1.id, sample1Bytes);
-      memoryDocumentBytes.set(doc2.id, sample2Bytes);
+      const doc3: DocumentRecord = {
+        id: 'doc-identity-1',
+        fileName: 'Employee_Passport_Verification.pdf',
+        filePath: '/storage/cloudnex/Identity/Employee_Passport_Verification.pdf',
+        lastOpenedDate: new Date(Date.now() - 3600000 * 24).toISOString(),
+        lastOpenedPage: 1,
+        fileSize: `${(identityBytes.byteLength / 1024).toFixed(1)} KB`,
+        pageCount: 1,
+        folder: 'Identity',
+        tags: ['#identity', '#gov-id', '#compliance', '#kyc-verified'],
+        aiCategoryConfidence: 99,
+        aiSummary: 'Official biometric passport identification credential for employee onboarding.',
+        aiReasoning: 'Detected government passport credential format, DOB, and citizenship record.',
+        aiEngine: 'gemini',
+        autoTaggedAt: new Date().toISOString(),
+      };
 
-      const docs = [doc1, doc2];
+      const doc4: DocumentRecord = {
+        id: 'doc-report-1',
+        fileName: 'Enterprise_SLA_Spec.pdf',
+        filePath: '/storage/cloudnex/Reports/Enterprise_SLA_Spec.pdf',
+        lastOpenedDate: new Date(Date.now() - 3600000 * 48).toISOString(),
+        lastOpenedPage: 1,
+        fileSize: `${(specBytes.byteLength / 1024).toFixed(1)} KB`,
+        pageCount: 2,
+        folder: 'Reports & Notes',
+        tags: ['#report', '#architecture', '#spec', '#sla'],
+        aiCategoryConfidence: 92,
+        aiSummary: 'Enterprise architecture specification and cloud performance guidelines.',
+        aiReasoning: 'Detected technical report structure, specifications, and architecture notes.',
+        aiEngine: 'heuristic',
+        autoTaggedAt: new Date().toISOString(),
+      };
+
+      memoryDocumentBytes.set(doc1.id, invoiceBytes);
+      memoryDocumentBytes.set(doc2.id, contractBytes);
+      memoryDocumentBytes.set(doc3.id, identityBytes);
+      memoryDocumentBytes.set(doc4.id, specBytes);
+
+      const docs = [doc1, doc2, doc3, doc4];
       localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(docs));
 
       // Initial audit logs
       this.logAction('OPEN_DOCUMENT', doc1.fileName);
-      this.logAction('MODIFY_DOCUMENT', doc2.fileName);
+      this.logAction('AUTO_TAG_DOCUMENT', doc1.fileName);
+      this.logAction('AUTO_TAG_DOCUMENT', doc2.fileName);
+      this.logAction('AUTO_TAG_DOCUMENT', doc3.fileName);
 
       return docs;
     } catch (e) {
@@ -72,9 +122,61 @@ export class StorageService {
   static getDocuments(): DocumentRecord[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.DOCUMENTS);
-      return data ? JSON.parse(data) : [];
+      const docs: DocumentRecord[] = data ? JSON.parse(data) : [];
+      // Ensure all documents have a folder property
+      let modified = false;
+      const normalized = docs.map((doc) => {
+        if (!doc.folder) {
+          modified = true;
+          const fn = doc.fileName.toLowerCase();
+          let f = 'Reports & Notes';
+          if (fn.includes('invoice') || fn.includes('bill')) f = 'Invoices';
+          else if (fn.includes('contract') || fn.includes('agreement') || fn.includes('nda')) f = 'Contracts';
+          else if (fn.includes('id') || fn.includes('passport') || fn.includes('license')) f = 'Identity';
+          else if (fn.includes('tax') || fn.includes('financial') || fn.includes('report')) f = 'Financial & Tax';
+          return {
+            ...doc,
+            folder: f,
+            tags: doc.tags || [`#${f.toLowerCase().replace(/[^a-z0-9]/g, '')}`],
+          };
+        }
+        return doc;
+      });
+      if (modified) {
+        localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(normalized));
+      }
+      return normalized;
     } catch {
       return [];
+    }
+  }
+
+  static getFolders(): string[] {
+    const defaultFolders = ['Invoices', 'Contracts', 'Identity', 'Financial & Tax', 'Receipts', 'Reports & Notes'];
+    const docs = this.getDocuments();
+    const customFolders = Array.from(new Set(docs.map((d) => d.folder).filter(Boolean) as string[]));
+    
+    // Combine defaults and custom folders
+    const all = Array.from(new Set([...defaultFolders, ...customFolders]));
+    return all;
+  }
+
+  static moveDocumentToFolder(docId: string, folderName: string): void {
+    const docs = this.getDocuments();
+    const doc = docs.find((d) => d.id === docId);
+    if (doc) {
+      doc.folder = folderName;
+      localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(docs));
+      this.logAction('MOVE_FOLDER', doc.fileName);
+    }
+  }
+
+  static updateDocumentTags(docId: string, tags: string[]): void {
+    const docs = this.getDocuments();
+    const doc = docs.find((d) => d.id === docId);
+    if (doc) {
+      doc.tags = tags;
+      localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(docs));
     }
   }
 
