@@ -1,0 +1,6 @@
+{
+  "name": "CloudNex PDF Pro",
+  "description": "Professional PDF reader, editor, and manager with page organization, digital signatures, annotations, and export tools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

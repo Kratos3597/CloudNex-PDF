@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --color-primary: #0052CC;
+  --color-accent: #4C9AFF;
+  --color-bg-light: #F4F5F7;
+  --color-text-dark: #172B4D;
+  --color-text-light: #6B778C;
+  --color-error: #DE350B;
+  --color-success: #36B37E;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Custom scrollbars for pdf canvas and panels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(107, 119, 140, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 119, 140, 0.5);
+}

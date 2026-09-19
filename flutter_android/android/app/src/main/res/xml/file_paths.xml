@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Cache directory for shared temporary signed/flattened PDFs -->
+    <cache-path name="shared_pdf_cache" path="." />
+    <!-- App-specific external storage -->
+    <external-files-path name="shared_pdf_files" path="." />
+    <external-cache-path name="shared_pdf_external_cache" path="." />
+</paths>
