@@ -6,8 +6,7 @@ import {
   User, 
   Moon, 
   Sun, 
-  FileText,
-  Smartphone
+  FileText
 } from 'lucide-react';
 import { TabType, DocumentRecord } from './types';
 import { StorageService } from './services/storage';
@@ -17,9 +16,7 @@ import { LibraryScreen } from './components/LibraryScreen';
 import { AnalyticsScreen } from './components/AnalyticsScreen';
 import { SignatureVaultScreen } from './components/SignatureVaultScreen';
 import { EditorScreen } from './components/EditorScreen';
-import { SyncfusionAndroidModal } from './components/SyncfusionAndroidModal';
 import { useDeviceLayout } from './hooks/useDeviceLayout';
-import { DeviceScaleControl } from './components/DeviceScaleControl';
 
 export const App: React.FC = () => {
   const layout = useDeviceLayout();
@@ -29,7 +26,6 @@ export const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'SYNCED' | 'SYNCING_CLOUDNEX...'>('SYNCED');
   const [isSyncLoading, setIsSyncLoading] = useState(false);
-  const [isSyncfusionModalOpen, setIsSyncfusionModalOpen] = useState(false);
 
   // Initialize documents & storage
   const loadDocuments = async () => {
@@ -168,20 +164,8 @@ export const App: React.FC = () => {
           </button>
         </nav>
 
-        {/* Right Actions: Device Scale Controller, Syncfusion & Dark Mode */}
+        {/* Right Actions: Dark Mode Toggle */}
         <div className="flex items-center gap-2">
-          {/* Device Orientation & Scaling Controller */}
-          <DeviceScaleControl layout={layout} />
-
-          <button
-            onClick={() => setIsSyncfusionModalOpen(true)}
-            className="px-2.5 py-1.5 rounded-xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/80 dark:bg-blue-950/40 text-[#0052CC] dark:text-blue-400 text-xs font-bold flex items-center gap-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors cursor-pointer"
-            title="Configure Syncfusion License, Stress Test PDFs & Android Studio Suite"
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline">Syncfusion & Android</span>
-          </button>
-
           <button
             onClick={() => setIsDarkMode(d => !d)}
             className="p-2 rounded-xl border border-gray-200 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-300 transition-colors cursor-pointer"
@@ -200,7 +184,6 @@ export const App: React.FC = () => {
             onOpenDocument={handleOpenDocument}
             onRefreshDocs={loadDocuments}
             onNavigateTab={setActiveTab}
-            onOpenSyncfusion={() => setIsSyncfusionModalOpen(true)}
           />
         )}
 
@@ -267,16 +250,6 @@ export const App: React.FC = () => {
           <span className="text-[10px] font-bold">Vault</span>
         </button>
       </nav>
-
-      {/* Syncfusion & Android Suite Modal */}
-      <SyncfusionAndroidModal
-        isOpen={isSyncfusionModalOpen}
-        onClose={() => setIsSyncfusionModalOpen(false)}
-        onDocumentCreated={(newDoc) => {
-          loadDocuments();
-          handleOpenDocument(newDoc);
-        }}
-      />
     </div>
   );
 };

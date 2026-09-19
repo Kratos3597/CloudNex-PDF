@@ -1,13 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
-export type DeviceModePreset = 'auto' | 'phone-portrait' | 'tablet-landscape' | 'desktop';
 export type DeviceType = 'phone' | 'tablet' | 'desktop';
 export type DeviceOrientation = 'portrait' | 'landscape';
 
 export interface DeviceLayoutState {
-  preset: DeviceModePreset;
-  setPreset: (preset: DeviceModePreset) => void;
-  // Effective dimensions (simulated or real)
   width: number;
   height: number;
   deviceType: DeviceType;
@@ -17,23 +13,18 @@ export interface DeviceLayoutState {
   isDesktop: boolean;
   isPhonePortrait: boolean;
   isTabletLandscape: boolean;
-  // Dynamic scaling metrics
   columnsCount: number;
   sidebarVisibleByDefault: boolean;
   touchTargetMinHeight: number;
-  fontSizeScale: number; // 1 for normal, 0.9 for compact phone, 1.05 for tablet
-  suggestedPdfScale: number; // Dynamic baseline PDF zoom
+  fontSizeScale: number;
+  suggestedPdfScale: number;
 }
 
 export function useDeviceLayout(): DeviceLayoutState {
-  const [preset, setPreset] = useState<DeviceModePreset>(() => {
-    return (localStorage.getItem('cloudnex_device_preset') as DeviceModePreset) || 'auto';
-  });
-
-  const [windowSize, setWindowSize] = useState({
+  const [windowSize, setWindowSize] = useState(() => ({
     width: typeof window !== 'undefined' ? window.innerWidth : 1024,
     height: typeof window !== 'undefined' ? window.innerHeight : 768,
-  });
+  }));
 
   useEffect(() => {
     const handleResize = () => {
@@ -51,47 +42,17 @@ export function useDeviceLayout(): DeviceLayoutState {
     };
   }, []);
 
-  const handleSetPreset = useCallback((newPreset: DeviceModePreset) => {
-    setPreset(newPreset);
-    localStorage.setItem('cloudnex_device_preset', newPreset);
-  }, []);
+  const { width, height } = windowSize;
+  const orientation: DeviceOrientation = height >= width ? 'portrait' : 'landscape';
 
-  // Compute effective width & height based on preset or real viewport
-  let effectiveWidth = windowSize.width;
-  let effectiveHeight = windowSize.height;
-
-  if (preset === 'phone-portrait') {
-    effectiveWidth = Math.min(windowSize.width, 390);
-    effectiveHeight = Math.max(windowSize.height, 844);
-  } else if (preset === 'tablet-landscape') {
-    effectiveWidth = Math.max(windowSize.width, 1024);
-    effectiveHeight = Math.min(windowSize.height, 768);
-  }
-
-  // Derive device type & orientation
-  const isLandscapeReal = effectiveWidth > effectiveHeight;
-  const orientation: DeviceOrientation = preset === 'phone-portrait'
-    ? 'portrait'
-    : preset === 'tablet-landscape'
-    ? 'landscape'
-    : isLandscapeReal
-    ? 'landscape'
-    : 'portrait';
-
+  // Dynamic device detection based on viewport, aspect ratio, and touch profile
   let deviceType: DeviceType = 'desktop';
-  if (preset === 'phone-portrait') {
+  if (width < 640 || (width < 768 && orientation === 'portrait')) {
     deviceType = 'phone';
-  } else if (preset === 'tablet-landscape') {
+  } else if (width <= 1200) {
     deviceType = 'tablet';
   } else {
-    // Auto detection
-    if (effectiveWidth < 640 || (effectiveWidth < 768 && orientation === 'portrait')) {
-      deviceType = 'phone';
-    } else if (effectiveWidth <= 1200) {
-      deviceType = 'tablet';
-    } else {
-      deviceType = 'desktop';
-    }
+    deviceType = 'desktop';
   }
 
   const isPhone = deviceType === 'phone';
@@ -100,30 +61,24 @@ export function useDeviceLayout(): DeviceLayoutState {
   const isPhonePortrait = isPhone && orientation === 'portrait';
   const isTabletLandscape = (isTablet || isDesktop) && orientation === 'landscape';
 
-  // Dynamic layout calculations
   const columnsCount = isPhone ? 1 : isTabletLandscape ? 3 : 2;
-  const sidebarVisibleByDefault = isTabletLandscape && effectiveWidth >= 900;
+  const sidebarVisibleByDefault = isTabletLandscape && width >= 860;
   const touchTargetMinHeight = isPhone ? 48 : 40;
   const fontSizeScale = isPhone ? 0.95 : isTabletLandscape ? 1.05 : 1;
 
-  // Suggested baseline PDF zoom scale to fit page width
-  // Standard A4 PDF point width is ~595px
-  let suggestedPdfScale = 1.2;
+  // Suggested baseline PDF zoom scale to automatically fit page dimensions
+  let suggestedPdfScale = 1.1;
   if (isPhonePortrait) {
-    // On phone portrait, fit comfortably within screen width minus 32px padding
-    const usableWidth = Math.max(280, effectiveWidth - 32);
-    suggestedPdfScale = Number(Math.max(0.48, Math.min(1.0, usableWidth / 595)).toFixed(2));
+    const usableWidth = Math.max(280, width - 24);
+    suggestedPdfScale = Number(Math.max(0.48, Math.min(1.05, usableWidth / 595)).toFixed(2));
   } else if (isTabletLandscape) {
-    // On tablet landscape, fit comfortably into dual-pane viewport
-    const availableWidth = effectiveWidth - (sidebarVisibleByDefault ? 280 : 80) - 64;
+    const availableWidth = width - (sidebarVisibleByDefault ? 220 : 60) - 48;
     suggestedPdfScale = Number(Math.max(0.85, Math.min(1.6, availableWidth / 595)).toFixed(2));
   }
 
   return {
-    preset,
-    setPreset: handleSetPreset,
-    width: effectiveWidth,
-    height: effectiveHeight,
+    width,
+    height,
     deviceType,
     orientation,
     isPhone,

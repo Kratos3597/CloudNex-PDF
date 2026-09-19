@@ -22,27 +22,24 @@ import {
   X,
   Plus,
   Share2,
-  Smartphone,
   PanelLeftClose,
   PanelLeftOpen,
   FileSignature,
   Menu,
-  FileCheck,
-  Check
+  Square,
+  Circle,
+  Minus
 } from 'lucide-react';
 import { DocumentRecord, ShadowObject, ShapeType, ActivePdfTool } from '../types';
 import { PdfEngine } from '../services/pdfEngine';
 import { StorageService } from '../services/storage';
-import { FloatingToolbar } from './FloatingToolbar';
 import { SignatureOverlay } from './SignatureOverlay';
 import { ShapeOverlay } from './ShapeOverlay';
 import { TextOverlay } from './TextOverlay';
 import { InkDrawingOverlay } from './InkDrawingOverlay';
 import { PageManagerModal } from './PageManagerModal';
 import { NeuralEditorModal } from './NeuralEditorModal';
-import { SyncfusionAndroidModal } from './SyncfusionAndroidModal';
 import { DeviceLayoutState, useDeviceLayout } from '../hooks/useDeviceLayout';
-import { DeviceScaleControl } from './DeviceScaleControl';
 
 interface EditorScreenProps {
   document: DocumentRecord;
@@ -76,10 +73,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   const [isPageManagerOpen, setIsPageManagerOpen] = useState(false);
   const [isNeuralEditorOpen, setIsNeuralEditorOpen] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [showAnnotateMenu, setShowAnnotateMenu] = useState(false);
-  const [showEditMenu, setShowEditMenu] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
-  const [isSyncfusionModalOpen, setIsSyncfusionModalOpen] = useState(false);
 
   // Responsive device panels
   const [thumbnails, setThumbnails] = useState<{ [page: number]: string }>({});
@@ -99,7 +93,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
     } else if (activeLayout.isTabletLandscape) {
       setIsThumbnailRailOpen(true);
     }
-  }, [activeLayout.preset, activeLayout.isPhonePortrait, activeLayout.isTabletLandscape, activeLayout.suggestedPdfScale]);
+  }, [activeLayout.isPhonePortrait, activeLayout.isTabletLandscape, activeLayout.suggestedPdfScale]);
 
   // Load document bytes on mount
   useEffect(() => {
@@ -243,17 +237,14 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   const handleInitiateShape = (shape: ShapeType) => {
     setCurrentShapeType(shape);
     setActivePdfTool('shape');
-    setShowAnnotateMenu(false);
   };
 
   const handleInitiateText = () => {
     setActivePdfTool('textPlacement');
-    setShowAnnotateMenu(false);
   };
 
   const handleInitiateInk = () => {
     setActivePdfTool('ink');
-    setShowAnnotateMenu(false);
   };
 
   const handleBurnInk = async (paths: { x: number; y: number }[][], strokeWidth: number, colorHex: string) => {
@@ -507,11 +498,8 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
           </div>
         )}
 
-        {/* Right: Device Switcher, Mode Toggle and Save/Share */}
+        {/* Right: Mode Toggle and Save/Share */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* Device Orientation & Scaling Controller */}
-          <DeviceScaleControl layout={activeLayout} compact />
-
           {/* VIEW / EDIT Toggle Capsule */}
           <div className="bg-gray-100 p-0.5 rounded-full flex items-center border border-gray-200">
             <button
@@ -551,17 +539,6 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
             <span className="hidden sm:inline">Share</span>
           </button>
 
-          {/* Syncfusion & Android Config Button */}
-          <button
-            id="editor-syncfusion-btn"
-            onClick={() => setIsSyncfusionModalOpen(true)}
-            className="p-1.5 sm:px-2.5 sm:py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer hidden md:flex"
-            title="Syncfusion & Android Suite Settings"
-          >
-            <Smartphone className="w-3.5 h-3.5 text-[#0052CC]" />
-            <span className="hidden lg:inline">Syncfusion</span>
-          </button>
-
           {/* Flatten & Save Button */}
           {shadowObjects.length > 0 && (
             <button
@@ -577,88 +554,150 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
         </div>
       </header>
 
-      {/* Floating Ribbon Toolbar (in Edit Mode on Tablets / Desktops) */}
+      {/* Sleek Tool Action Strip (Modern single-tier toolbar without ribbon tabs) */}
       {isEditMode && !activeLayout.isPhonePortrait && (
-        <FloatingToolbar
-          onAnnotate={() => setShowAnnotateMenu(prev => !prev)}
-          onSign={handleInitiateSignature}
-          onEdit={() => setShowEditMenu(prev => !prev)}
-          onForms={handleFormCheck}
-          onExport={() => setShowExportModal(true)}
-          onPrint={handlePrint}
-        />
-      )}
+        <div 
+          id="editor-tool-strip"
+          className="h-11 bg-white border-b border-gray-200 px-4 flex items-center justify-between z-20 shadow-xs select-none shrink-0"
+        >
+          {/* Annotation & Edit Instruments */}
+          <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+            <button
+              id="tool-btn-sign"
+              onClick={handleInitiateSignature}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold text-gray-700 hover:text-[#0052CC] hover:bg-blue-50 flex items-center gap-1.5 transition-colors cursor-pointer border border-transparent hover:border-blue-200"
+              title="Add Signature"
+            >
+              <FileSignature className="w-4 h-4 text-[#0052CC]" />
+              <span>Sign</span>
+            </button>
 
-      {/* Sub-menu popovers for Annotate and Edit */}
-      {isEditMode && showAnnotateMenu && (
-        <div className="absolute top-28 left-6 z-40 bg-white border border-gray-200 rounded-xl shadow-xl p-2 w-56 animate-in fade-in duration-150">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 py-1 block">
-            Annotation Instruments
-          </span>
-          <button
-            onClick={handleInitiateInk}
-            className="w-full text-left px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer"
-          >
-            <Edit3 className="w-4 h-4 text-[#0052CC]" />
-            <span>Freehand Ink Pen</span>
-          </button>
-          <button
-            onClick={handleInitiateText}
-            className="w-full text-left px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer"
-          >
-            <Plus className="w-4 h-4 text-[#0052CC]" />
-            <span>Add Text Box</span>
-          </button>
-          <button
-            onClick={() => handleInitiateShape('rectangle')}
-            className="w-full text-left px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer"
-          >
-            <Layers className="w-4 h-4 text-[#0052CC]" />
-            <span>Draw Rectangle</span>
-          </button>
-          <button
-            onClick={() => handleInitiateShape('circle')}
-            className="w-full text-left px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer"
-          >
-            <Layers className="w-4 h-4 text-[#0052CC]" />
-            <span>Draw Circle</span>
-          </button>
-          <button
-            onClick={() => handleInitiateShape('line')}
-            className="w-full text-left px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer"
-          >
-            <Layers className="w-4 h-4 text-[#0052CC]" />
-            <span>Draw Line</span>
-          </button>
-        </div>
-      )}
+            <button
+              id="tool-btn-ink"
+              onClick={handleInitiateInk}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
+                activePdfTool === 'ink'
+                  ? 'bg-blue-50 text-[#0052CC] border-blue-200'
+                  : 'text-gray-700 hover:text-[#0052CC] hover:bg-blue-50 border-transparent hover:border-blue-200'
+              }`}
+              title="Draw with Freehand Ink"
+            >
+              <Edit3 className="w-4 h-4 text-[#0052CC]" />
+              <span>Ink Pen</span>
+            </button>
 
-      {isEditMode && showEditMenu && (
-        <div className="absolute top-28 left-48 z-40 bg-white border border-gray-200 rounded-xl shadow-xl p-2 w-56 animate-in fade-in duration-150">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 py-1 block">
-            Document Operations
-          </span>
-          <button
-            onClick={() => { setIsPageManagerOpen(true); setShowEditMenu(false); }}
-            className="w-full text-left px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer"
-          >
-            <Layers className="w-4 h-4 text-[#0052CC]" />
-            <span>Page Manager (Reorder/Delete)</span>
-          </button>
-          <button
-            onClick={() => { setIsNeuralEditorOpen(true); setShowEditMenu(false); }}
-            className="w-full text-left px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4 text-[#0052CC]" />
-            <span>Neural Text Reconstruction</span>
-          </button>
-          <button
-            onClick={() => { handleApplyWatermark(); setShowEditMenu(false); }}
-            className="w-full text-left px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer"
-          >
-            <Stamp className="w-4 h-4 text-[#0052CC]" />
-            <span>Apply Watermark</span>
-          </button>
+            <button
+              id="tool-btn-text"
+              onClick={handleInitiateText}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
+                activePdfTool === 'textPlacement'
+                  ? 'bg-blue-50 text-[#0052CC] border-blue-200'
+                  : 'text-gray-700 hover:text-[#0052CC] hover:bg-blue-50 border-transparent hover:border-blue-200'
+              }`}
+              title="Add Text Field"
+            >
+              <Plus className="w-4 h-4 text-[#0052CC]" />
+              <span>Text</span>
+            </button>
+
+            <div className="h-4 w-px bg-gray-200 mx-1" />
+
+            {/* Shape Tools */}
+            <button
+              id="tool-btn-rect"
+              onClick={() => handleInitiateShape('rectangle')}
+              className={`px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer border ${
+                activePdfTool === 'shape' && currentShapeType === 'rectangle'
+                  ? 'bg-blue-50 text-[#0052CC] border-blue-200'
+                  : 'text-gray-600 hover:bg-gray-100 border-transparent'
+              }`}
+              title="Draw Rectangle"
+            >
+              <Square className="w-3.5 h-3.5 text-gray-500" />
+              <span>Rect</span>
+            </button>
+
+            <button
+              id="tool-btn-circle"
+              onClick={() => handleInitiateShape('circle')}
+              className={`px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer border ${
+                activePdfTool === 'shape' && currentShapeType === 'circle'
+                  ? 'bg-blue-50 text-[#0052CC] border-blue-200'
+                  : 'text-gray-600 hover:bg-gray-100 border-transparent'
+              }`}
+              title="Draw Circle"
+            >
+              <Circle className="w-3.5 h-3.5 text-gray-500" />
+              <span>Circle</span>
+            </button>
+
+            <button
+              id="tool-btn-line"
+              onClick={() => handleInitiateShape('line')}
+              className={`px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer border ${
+                activePdfTool === 'shape' && currentShapeType === 'line'
+                  ? 'bg-blue-50 text-[#0052CC] border-blue-200'
+                  : 'text-gray-600 hover:bg-gray-100 border-transparent'
+              }`}
+              title="Draw Line"
+            >
+              <Minus className="w-3.5 h-3.5 text-gray-500" />
+              <span>Line</span>
+            </button>
+
+            <div className="h-4 w-px bg-gray-200 mx-1" />
+
+            {/* Document Operations */}
+            <button
+              id="tool-btn-organize"
+              onClick={() => setIsPageManagerOpen(true)}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold text-gray-700 hover:text-[#0052CC] hover:bg-blue-50 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Page Manager (Reorder, Rotate, Delete)"
+            >
+              <Layers className="w-3.5 h-3.5 text-gray-500" />
+              <span>Pages</span>
+            </button>
+
+            <button
+              id="tool-btn-neural"
+              onClick={() => setIsNeuralEditorOpen(true)}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold text-gray-700 hover:text-[#0052CC] hover:bg-blue-50 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Neural OCR & Text Replacement"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#0052CC]" />
+              <span>AI Edit</span>
+            </button>
+
+            <button
+              id="tool-btn-watermark"
+              onClick={handleApplyWatermark}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold text-gray-700 hover:text-[#0052CC] hover:bg-blue-50 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Apply Confidential Watermark"
+            >
+              <Stamp className="w-3.5 h-3.5 text-gray-500" />
+              <span>Watermark</span>
+            </button>
+          </div>
+
+          {/* Right quick tools: Export, Print */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Export Document"
+            >
+              <Download className="w-3.5 h-3.5 text-gray-600" />
+              <span>Export</span>
+            </button>
+
+            <button
+              onClick={handlePrint}
+              className="p-1 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+              title="Print Document"
+            >
+              <Printer className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -1053,17 +1092,6 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
                 <span className="font-bold text-xs text-[#172B4D]">Export File</span>
                 <span className="text-[10px] text-gray-500">PDF, Excel, Word</span>
               </button>
-
-              <button
-                onClick={() => { setIsSyncfusionModalOpen(true); setIsMobileToolsOpen(false); }}
-                className="p-3 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/60 flex flex-col items-start gap-1.5 text-left cursor-pointer transition-colors col-span-2"
-              >
-                <div className="flex items-center gap-2">
-                  <Smartphone className="w-5 h-5 text-[#0052CC]" />
-                  <span className="font-bold text-xs text-[#0052CC]">Syncfusion & Android Suite</span>
-                </div>
-                <span className="text-[10px] text-[#6B778C]">License key management, large-heap stress tests, and APK guidelines</span>
-              </button>
             </div>
           </div>
         </div>
@@ -1172,16 +1200,6 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
           }}
         />
       )}
-
-      {/* Syncfusion & Android Configuration Modal */}
-      <SyncfusionAndroidModal
-        isOpen={isSyncfusionModalOpen}
-        onClose={() => setIsSyncfusionModalOpen(false)}
-        onDocumentCreated={(newDoc) => {
-          onRefreshDocs();
-          showNotification('Stress test document created in library!');
-        }}
-      />
     </div>
   );
 };

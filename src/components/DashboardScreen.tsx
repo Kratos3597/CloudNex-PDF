@@ -9,7 +9,6 @@ import {
   Clock, 
   Trash2,
   FolderOpen,
-  Smartphone,
   Share2
 } from 'lucide-react';
 import { DocumentRecord, TabType } from '../types';
@@ -21,7 +20,6 @@ interface DashboardScreenProps {
   onOpenDocument: (doc: DocumentRecord) => void;
   onRefreshDocs: () => void;
   onNavigateTab: (tab: TabType) => void;
-  onOpenSyncfusion?: () => void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
@@ -29,7 +27,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onOpenDocument,
   onRefreshDocs,
   onNavigateTab,
-  onOpenSyncfusion,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mergeInputRef = useRef<HTMLInputElement>(null);
@@ -179,7 +176,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         <h2 className="text-sm font-bold uppercase tracking-wider text-[#6B778C] mb-4">
           Quick Actions
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Upload Card */}
           <button
             id="quick-action-upload"
@@ -214,25 +211,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               </h3>
               <p className="text-xs text-[#6B778C] mt-1">
                 Combine multiple PDF documents into one
-              </p>
-            </div>
-          </button>
-
-          {/* Syncfusion & Android Card */}
-          <button
-            id="quick-action-syncfusion"
-            onClick={onOpenSyncfusion}
-            className="bg-white p-5 rounded-xl border border-blue-200 shadow-sm hover:border-[#0052CC] hover:shadow-md transition-all text-left flex items-start gap-4 group cursor-pointer"
-          >
-            <div className="p-3 rounded-lg bg-blue-50 text-[#0052CC] group-hover:bg-[#0052CC] group-hover:text-white transition-colors shrink-0">
-              <Smartphone className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="font-bold text-[#172B4D] text-sm group-hover:text-[#0052CC] transition-colors flex items-center gap-1.5">
-                Syncfusion Suite
-              </h3>
-              <p className="text-xs text-[#6B778C] mt-1">
-                License key, stress tests & Android setup
               </p>
             </div>
           </button>
