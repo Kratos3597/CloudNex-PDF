@@ -256,30 +256,40 @@ export class PdfEngine {
     canvas: HTMLCanvasElement,
     scale: number = 1.3
   ): Promise<{ width: number; height: number }> {
-    const loadingTask = pdfjsLib.getDocument({ data: pdfBytes.slice() });
-    const pdfDoc = await loadingTask.promise;
-    const page = await pdfDoc.getPage(pageNumber);
+    let pdfDoc: any = null;
+    let page: any = null;
+    try {
+      const loadingTask = pdfjsLib.getDocument({ data: pdfBytes.slice() });
+      pdfDoc = await loadingTask.promise;
+      page = await pdfDoc.getPage(pageNumber);
 
-    // Safeguard scale on high-density displays to prevent mobile canvas OOM
-    const safeScale = Math.min(scale, 2.5);
-    const viewport = page.getViewport({ scale: safeScale });
+      // Safeguard scale on high-density displays to prevent mobile canvas OOM
+      const safeScale = Math.min(scale, 2.5);
+      const viewport = page.getViewport({ scale: safeScale });
 
-    // Explicitly reset buffer to clean up memory
-    canvas.width = Math.floor(viewport.width);
-    canvas.height = Math.floor(viewport.height);
+      // Explicitly reset buffer to clean up memory
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas context unavailable');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context unavailable');
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    await page.render({
-      canvasContext: ctx,
-      viewport: viewport,
-    }).promise;
+      await page.render({
+        canvasContext: ctx,
+        viewport: viewport,
+      }).promise;
 
-    page.cleanup();
-    return { width: viewport.width, height: viewport.height };
+      return { width: viewport.width, height: viewport.height };
+    } finally {
+      if (page) {
+        try { page.cleanup(); } catch (_) {}
+      }
+      if (pdfDoc) {
+        try { pdfDoc.destroy(); } catch (_) {}
+      }
+    }
   }
 
   /**
@@ -689,10 +699,12 @@ export class PdfEngine {
    * Generates a thumbnail image data URL for a given page
    */
   static async renderThumbnail(pdfBytes: Uint8Array, pageNumber: number): Promise<string> {
+    let pdfDoc: any = null;
+    let page: any = null;
     try {
       const loadingTask = pdfjsLib.getDocument({ data: pdfBytes.slice() });
-      const pdfDoc = await loadingTask.promise;
-      const page = await pdfDoc.getPage(pageNumber);
+      pdfDoc = await loadingTask.promise;
+      page = await pdfDoc.getPage(pageNumber);
       const viewport = page.getViewport({ scale: 0.35 });
 
       const offscreenCanvas = document.createElement('canvas');
@@ -706,6 +718,13 @@ export class PdfEngine {
       }
     } catch (e) {
       console.error('Failed to render thumbnail:', e);
+    } finally {
+      if (page) {
+        try { page.cleanup(); } catch (_) {}
+      }
+      if (pdfDoc) {
+        try { pdfDoc.destroy(); } catch (_) {}
+      }
     }
     return '';
   }

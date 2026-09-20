@@ -366,8 +366,10 @@ export class OcrService {
         const safeFontSize = Math.max(6, Math.min(48, hPoint * 0.85));
 
         try {
-          // Draw invisible text stream: opacity 0 makes it invisible visually, but fully indexable & selectable
-          page.drawText(word.text, {
+          // Draw invisible text stream: opacity 0 makes it invisible visually, but fully indexable & selectable.
+          // Add trailing space so standard PDF text extractors and readers maintain word boundaries.
+          const textToEmbed = word.text.endsWith(' ') ? word.text : `${word.text} `;
+          page.drawText(textToEmbed, {
             x: Math.max(0, xPoint),
             y: Math.max(0, yPoint),
             size: safeFontSize,

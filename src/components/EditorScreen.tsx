@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   ArrowLeft, 
   ChevronLeft, 
@@ -84,6 +84,15 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
   const [currentPageMatches, setCurrentPageMatches] = useState<{ id: string; str: string; page: number }[]>([]);
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
 
+  const handleMatchesFound = useCallback((matches: { id: string; str: string; page: number }[]) => {
+    setCurrentPageMatches(prev => {
+      if (prev.length === matches.length && prev.every((m, i) => m.id === matches[i]?.id)) {
+        return prev;
+      }
+      return matches;
+    });
+  }, []);
+
   // OCR Inspector & Progress Modal state
   const [isOcrInspectorOpen, setIsOcrInspectorOpen] = useState(false);
   const [isOcrProgressOpen, setIsOcrProgressOpen] = useState(false);
@@ -155,7 +164,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
       try {
         const dims = await PdfEngine.renderPageToCanvas(pdfBytes, currentPage, canvasRef.current!, zoomScale);
         if (!isCancelled && dims) {
-          setCanvasDims(dims);
+          setCanvasDims(prev => (prev.width === dims.width && prev.height === dims.height ? prev : dims));
         }
       } catch (e) {
         if (!isCancelled) console.error('Render page error:', e);
@@ -1019,7 +1028,7 @@ export const EditorScreen: React.FC<EditorScreenProps> = ({
                 canvasHeight={canvasDims.height}
                 searchQuery={searchQuery}
                 activeMatchIndex={activeMatchIndex}
-                onMatchesFound={(matches) => setCurrentPageMatches(matches)}
+                onMatchesFound={handleMatchesFound}
                 isDrawingMode={
                   activePdfTool === 'ink' ||
                   activePdfTool === 'shape' ||
