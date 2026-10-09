@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'dart:ui' as ui;
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
@@ -90,7 +90,7 @@ class FlutterOcrService {
       // Setting text rendering mode to invisible allows users to select, copy,
       // and search (Ctrl+F) the text while visually seeing the crisp original scan!
       final PdfFont ocrFont = PdfStandardFont(PdfFontFamily.helvetica, 10);
-      final PdfBrush invisibleBrush = PdfSolidBrush(const PdfColor(0, 0, 0, 0)); // Transparent alpha
+      final PdfBrush invisibleBrush = PdfSolidBrush(PdfColor(0, 0, 0, 0)); // Transparent alpha
 
       for (final word in detectedWords) {
         if (word.text.trim().isEmpty) continue;
@@ -143,7 +143,7 @@ class FlutterOcrService {
 
       final PdfPage page = document.pages[pageIndex];
       final PdfFont ocrFont = PdfStandardFont(PdfFontFamily.helvetica, 10);
-      final PdfBrush invisibleBrush = PdfSolidBrush(const PdfColor(0, 0, 0, 0));
+      final PdfBrush invisibleBrush = PdfSolidBrush(PdfColor(0, 0, 0, 0));
 
       for (final word in ocrWords) {
         if (word.text.trim().isEmpty) continue;

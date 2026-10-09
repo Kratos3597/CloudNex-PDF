@@ -7,18 +7,16 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'services/pdf_service.dart';
 import 'services/ocr_service.dart';
 import 'widgets/signature_pad.dart';
+import 'widgets/page_organizer.dart';
 
 void main() {
-  // IMPORTANT: Register your Syncfusion License Key here
-  // You can obtain your commercial or free community license from syncfusion.com
+  // Syncfusion License Key Registration
   const String syncfusionLicenseKey = String.fromEnvironment(
     'SYNCFUSION_LICENSE_KEY',
-    defaultValue: 'YOUR_SYNCFUSION_LICENSE_KEY_HERE',
+    defaultValue: 'Ngo9BigBOggjHTQxAR8/V1JBaF5cXmRCd1p/TH5YfUNzdUVEY1ZUTXxaS1ZhSXxVd0VjUH1edHFXQGlZU019XEc=',
   );
 
-  if (syncfusionLicenseKey != 'YOUR_SYNCFUSION_LICENSE_KEY_HERE') {
-    SyncfusionLicense.registerLicense(syncfusionLicenseKey);
-  }
+  SyncfusionLicense.registerLicense(syncfusionLicenseKey);
 
   runApp(const CloudNexPdfApp());
 }
@@ -37,7 +35,7 @@ class CloudNexPdfApp extends StatelessWidget {
           primary: const Color(0xFF0052CC),
         ),
         useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF4F5F7),
+        scaffoldBackgroundColor: const Color(0xFF1E1E2C),
       ),
       home: const PdfViewerScreen(),
     );
@@ -53,16 +51,39 @@ class PdfViewerScreen extends StatefulWidget {
 
 class _PdfViewerScreenState extends State<PdfViewerScreen> {
   final PdfViewerController _pdfViewerController = PdfViewerController();
+  final TextEditingController _searchController = TextEditingController();
+
   File? _currentPdfFile;
   bool _isLoading = true;
   String _documentTitle = 'Enterprise Specification.pdf';
   int _currentPage = 1;
   int _pageCount = 0;
 
+  // Adobe Mobile Parity Features
+  bool _isNightMode = false;
+  bool _isSearchBarVisible = false;
+  PdfTextSearchResult? _searchResult;
+  PdfPageLayoutMode _pageLayoutMode = PdfPageLayoutMode.continuous;
+
+  // Invert color matrix for Night / Reading Mode
+  static const ColorFilter _nightModeMatrix = ColorFilter.matrix([
+    -1, 0, 0, 0, 255,
+    0, -1, 0, 0, 255,
+    0, 0, -1, 0, 255,
+    0, 0, 0, 1, 0,
+  ]);
+
   @override
   void initState() {
     super.initState();
     _loadSamplePdf();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _pdfViewerController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadSamplePdf() async {
@@ -90,14 +111,49 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       setState(() {
         _currentPdfFile = File(result.files.single.path!);
         _documentTitle = result.files.single.name;
+        _searchResult = null;
+        _isSearchBarVisible = false;
       });
     }
+  }
+
+  void _performSearch(String query) {
+    if (query.trim().isEmpty) return;
+    final result = _pdfViewerController.searchText(query);
+    setState(() {
+      _searchResult = result;
+    });
+  }
+
+  void _clearSearch() {
+    _searchResult?.clear();
+    _searchController.clear();
+    setState(() {
+      _searchResult = null;
+      _isSearchBarVisible = false;
+    });
+  }
+
+  void _openPageOrganizer() {
+    if (_currentPdfFile == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => PageOrganizerModal(
+        pdfFile: _currentPdfFile!,
+        onDocumentUpdated: (updatedFile) {
+          setState(() {
+            _currentPdfFile = updatedFile;
+          });
+        },
+      ),
+    );
   }
 
   Future<void> _handleSignAndShare() async {
     if (_currentPdfFile == null) return;
 
-    // 1. Show Signature Pad
     showDialog(
       context: context,
       builder: (ctx) => SignaturePadModal(
@@ -120,7 +176,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     try {
       final originalBytes = await _currentPdfFile!.readAsBytes();
       
-      // Place signature stamp at bottom right of current page
       final signedFile = await CloudNexPdfService.applySignatureAndFlatten(
         originalPdfBytes: originalBytes,
         signaturePngBytes: signatureBytes,
@@ -133,7 +188,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         _currentPdfFile = signedFile;
       });
 
-      // 2. Trigger native Android Share Sheet
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -216,76 +270,274 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    Widget pdfViewerWidget = _isLoading
+        ? const Center(child: CircularProgressIndicator(color: Color(0xFF0052CC)))
+        : _currentPdfFile == null
+            ? const Center(child: Text('No PDF Loaded', style: TextStyle(color: Colors.white)))
+            : SfPdfViewer.file(
+                _currentPdfFile!,
+                controller: _pdfViewerController,
+                canShowScrollHead: true,
+                canShowScrollStatus: true,
+                enableDoubleTapZooming: true,
+                enableTextSelection: true,
+                enableDocumentLinkAnnotation: true,
+                enableHyperlinkNavigation: true,
+                pageLayoutMode: _pageLayoutMode,
+                onDocumentLoaded: (details) {
+                  setState(() {
+                    _pageCount = details.document.pages.count;
+                  });
+                },
+                onPageChanged: (details) {
+                  setState(() {
+                    _currentPage = details.newPageNumber;
+                  });
+                },
+                onTextSelectionChanged: (details) {
+                  if (details.selectedText != null && details.selectedText!.isNotEmpty) {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Selected: "${details.selectedText}"'),
+                        duration: const Duration(seconds: 2),
+                        action: SnackBarAction(
+                          label: 'Copy',
+                          onPressed: () {
+                            // Text copied automatically by system viewer
+                          },
+                        ),
+                      ),
+                    );
+                  }
+                },
+              );
+
+    // Apply Night / Reading Mode Invert Filter
+    if (_isNightMode) {
+      pdfViewerWidget = ColorFiltered(
+        colorFilter: _nightModeMatrix,
+        child: pdfViewerWidget,
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: const Color(0xFF1E1E2C),
+      body: SafeArea(
+        child: Stack(
           children: [
-            Text(
-              _documentTitle,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF172B4D)),
+            // Main PDF Canvas
+            Positioned.fill(child: pdfViewerWidget),
+
+            // Adobe-Style Floating Top Bar
+            Positioned(
+              top: 12,
+              left: 12,
+              right: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.picture_as_pdf, color: Color(0xFF0052CC), size: 22),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _documentTitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF172B4D),
+                                ),
+                              ),
+                              Text(
+                                'Page $_currentPage of $_pageCount | Syncfusion Engine',
+                                style: const TextStyle(fontSize: 10, color: Color(0xFF6B778C)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Layout Mode Toggle
+                        IconButton(
+                          icon: Icon(
+                            _pageLayoutMode == PdfPageLayoutMode.continuous
+                                ? Icons.view_day_outlined
+                                : Icons.view_array_outlined,
+                            color: const Color(0xFF0052CC),
+                            size: 20,
+                          ),
+                          tooltip: 'Toggle Continuous / Single Layout',
+                          onPressed: () {
+                            setState(() {
+                              _pageLayoutMode = _pageLayoutMode == PdfPageLayoutMode.continuous
+                                  ? PdfPageLayoutMode.single
+                                  : PdfPageLayoutMode.continuous;
+                            });
+                          },
+                        ),
+                        // Search Toggle
+                        IconButton(
+                          icon: Icon(
+                            _isSearchBarVisible ? Icons.search_off : Icons.search,
+                            color: const Color(0xFF0052CC),
+                            size: 20,
+                          ),
+                          tooltip: 'Search In PDF',
+                          onPressed: () {
+                            setState(() {
+                              _isSearchBarVisible = !_isSearchBarVisible;
+                              if (!_isSearchBarVisible) _clearSearch();
+                            });
+                          },
+                        ),
+                        // Pick File
+                        IconButton(
+                          icon: const Icon(Icons.folder_open, color: Color(0xFF0052CC), size: 20),
+                          tooltip: 'Open PDF File',
+                          onPressed: _pickExternalPdf,
+                        ),
+                      ],
+                    ),
+
+                    // Expandable Adobe Search Bar
+                    if (_isSearchBarVisible) ...[
+                      const Divider(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              autofocus: true,
+                              style: const TextStyle(fontSize: 13),
+                              decoration: InputDecoration(
+                                hintText: 'Search words in PDF...',
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(color: Color(0xFFDFE1E6)),
+                                ),
+                              ),
+                              onSubmitted: _performSearch,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back_ios, size: 16),
+                            onPressed: () => _searchResult?.previousInstance(),
+                          ),
+                          Text(
+                            _searchResult != null && _searchResult!.totalInstanceCount > 0
+                                ? '${_searchResult!.currentInstanceIndex}/${_searchResult!.totalInstanceCount}'
+                                : '0/0',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                            onPressed: () => _searchResult?.nextInstance(),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 18, color: Colors.red),
+                            onPressed: _clearSearch,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
-            Text(
-              'Page $_currentPage of $_pageCount | Syncfusion Engine',
-              style: const TextStyle(fontSize: 11, color: Color(0xFF6B778C)),
+
+            // Adobe-Style Floating Bottom Tool Bar
+            Positioned(
+              bottom: 16,
+              left: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF172B4D).withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // 1. Page Organizer
+                    IconButton(
+                      icon: const Icon(Icons.grid_view_rounded, color: Colors.white, size: 22),
+                      tooltip: 'Page Organizer',
+                      onPressed: _openPageOrganizer,
+                    ),
+                    // 2. Digital Signature & Flattening
+                    IconButton(
+                      icon: const Icon(Icons.draw, color: Color(0xFF4C9AFF), size: 22),
+                      tooltip: 'Sign & Flatten',
+                      onPressed: _handleSignAndShare,
+                    ),
+                    // 3. OCR Scan Image to Searchable PDF
+                    IconButton(
+                      icon: const Icon(Icons.document_scanner, color: Color(0xFF36B37E), size: 22),
+                      tooltip: 'OCR Scan to PDF',
+                      onPressed: _handleOcrScanImage,
+                    ),
+                    // 4. Night / Reading Mode
+                    IconButton(
+                      icon: Icon(
+                        _isNightMode ? Icons.light_mode : Icons.dark_mode,
+                        color: _isNightMode ? const Color(0xFFFFAB00) : Colors.white,
+                        size: 22,
+                      ),
+                      tooltip: _isNightMode ? 'Switch to Day Mode' : 'Switch to Night Mode',
+                      onPressed: () {
+                        setState(() {
+                          _isNightMode = !_isNightMode;
+                        });
+                      },
+                    ),
+                    // 5. Native Share Sheet
+                    IconButton(
+                      icon: const Icon(Icons.share, color: Colors.white, size: 22),
+                      tooltip: 'Share Document',
+                      onPressed: () {
+                        if (_currentPdfFile != null) {
+                          CloudNexPdfService.sharePdfFile(
+                            pdfFile: _currentPdfFile!,
+                            subject: _documentTitle,
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.document_scanner, color: Color(0xFF0052CC)),
-            tooltip: 'OCR Image to Searchable PDF',
-            onPressed: _handleOcrScanImage,
-          ),
-          IconButton(
-            icon: const Icon(Icons.file_open, color: Color(0xFF0052CC)),
-            tooltip: 'Open PDF',
-            onPressed: _pickExternalPdf,
-          ),
-          IconButton(
-            icon: const Icon(Icons.share, color: Color(0xFF0052CC)),
-            tooltip: 'Share Document',
-            onPressed: () {
-              if (_currentPdfFile != null) {
-                CloudNexPdfService.sharePdfFile(
-                  pdfFile: _currentPdfFile!,
-                  subject: _documentTitle,
-                );
-              }
-            },
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _currentPdfFile == null
-              ? const Center(child: Text('No PDF Loaded'))
-              : SfPdfViewer.file(
-                  _currentPdfFile!,
-                  controller: _pdfViewerController,
-                  canShowScrollHead: true,
-                  canShowScrollStatus: true,
-                  enableDoubleTapZooming: true,
-                  pageLayoutMode: PdfPageLayoutMode.continuous,
-                  onDocumentLoaded: (details) {
-                    setState(() {
-                      _pageCount = details.document.pages.count;
-                    });
-                  },
-                  onPageChanged: (details) {
-                    setState(() {
-                      _currentPage = details.newPageNumber;
-                    });
-                  },
-                ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _handleSignAndShare,
-        backgroundColor: const Color(0xFF0052CC),
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.draw),
-        label: const Text('Sign & Share'),
       ),
     );
   }

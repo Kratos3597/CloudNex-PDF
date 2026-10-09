@@ -138,4 +138,109 @@ class CloudNexPdfService {
       text: text ?? 'Here is the signed PDF document from CloudNex PDF Pro.',
     );
   }
+
+  /// Rotates a page in a PDF document by 90 degrees clockwise
+  static Future<File> rotatePage({
+    required File originalFile,
+    required int pageIndex,
+    required String outputFileName,
+  }) async {
+    final Uint8List bytes = await originalFile.readAsBytes();
+    final PdfDocument document = PdfDocument(inputBytes: bytes);
+
+    try {
+      if (pageIndex < 0 || pageIndex >= document.pages.count) {
+        throw ArgumentError('Invalid page index: $pageIndex');
+      }
+
+      final PdfPage page = document.pages[pageIndex];
+      switch (page.rotation) {
+        case PdfPageRotateAngle.rotateAngle0:
+          page.rotation = PdfPageRotateAngle.rotateAngle90;
+          break;
+        case PdfPageRotateAngle.rotateAngle90:
+          page.rotation = PdfPageRotateAngle.rotateAngle180;
+          break;
+        case PdfPageRotateAngle.rotateAngle180:
+          page.rotation = PdfPageRotateAngle.rotateAngle270;
+          break;
+        case PdfPageRotateAngle.rotateAngle270:
+          page.rotation = PdfPageRotateAngle.rotateAngle0;
+          break;
+      }
+
+      final List<int> outputBytes = await document.save();
+      final Directory tempDir = await getTemporaryDirectory();
+      final File savedFile = File('${tempDir.path}/$outputFileName');
+      await savedFile.writeAsBytes(outputBytes, flush: true);
+      return savedFile;
+    } finally {
+      document.dispose();
+    }
+  }
+
+  /// Deletes a specific page from a PDF document
+  static Future<File> deletePage({
+    required File originalFile,
+    required int pageIndex,
+    required String outputFileName,
+  }) async {
+    final Uint8List bytes = await originalFile.readAsBytes();
+    final PdfDocument document = PdfDocument(inputBytes: bytes);
+
+    try {
+      if (document.pages.count <= 1) {
+        throw Exception('Cannot delete the only page in a PDF document.');
+      }
+      if (pageIndex < 0 || pageIndex >= document.pages.count) {
+        throw ArgumentError('Invalid page index: $pageIndex');
+      }
+
+      document.pages.removeAt(pageIndex);
+
+      final List<int> outputBytes = await document.save();
+      final Directory tempDir = await getTemporaryDirectory();
+      final File savedFile = File('${tempDir.path}/$outputFileName');
+      await savedFile.writeAsBytes(outputBytes, flush: true);
+      return savedFile;
+    } finally {
+      document.dispose();
+    }
+  }
+
+  /// Reorders pages in a PDF document by swapping/moving page from oldIndex to newIndex
+  static Future<File> reorderPages({
+    required File originalFile,
+    required int oldIndex,
+    required int newIndex,
+    required String outputFileName,
+  }) async {
+    final Uint8List bytes = await originalFile.readAsBytes();
+    final PdfDocument oldDoc = PdfDocument(inputBytes: bytes);
+    final PdfDocument newDoc = PdfDocument();
+
+    try {
+      final int pageCount = oldDoc.pages.count;
+      List<int> pageIndices = List.generate(pageCount, (i) => i);
+
+      final int item = pageIndices.removeAt(oldIndex);
+      pageIndices.insert(newIndex, item);
+
+      for (int i in pageIndices) {
+        newDoc.pages.add().graphics.drawPdfTemplate(
+          oldDoc.pages[i].createTemplate(),
+          const Offset(0, 0),
+        );
+      }
+
+      final List<int> outputBytes = await newDoc.save();
+      final Directory tempDir = await getTemporaryDirectory();
+      final File savedFile = File('${tempDir.path}/$outputFileName');
+      await savedFile.writeAsBytes(outputBytes, flush: true);
+      return savedFile;
+    } finally {
+      oldDoc.dispose();
+      newDoc.dispose();
+    }
+  }
 }
